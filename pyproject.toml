@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wolfgang-lm"
+version = "0.1.0"
+description = "A historical language model based on Goethe."
+requires-python = ">=3.12"
+dependencies = [
+    "google-genai",
+    "numpy",
+    "tokenizers",
+    "python-dotenv",
+]
+
+[tool.setuptools.packages.find]
+include = ["wolfgang_lm*"]
+
+# Pixi Environment Configuration
+[tool.pixi.workspace]
+channels = ["pytorch", "nvidia", "conda-forge"]
+platforms = ["osx-arm64", "linux-64"]
+
+[tool.pixi.dependencies]
+python = "=3.12"
+pytorch = ">=2.4.0"
+fastapi = ">=0.110.0"
+uvicorn = ">=0.29.0"
+pydantic = ">=2.7.0"
+tqdm = "*"
+
+[tool.pixi.pypi-dependencies]
+wolfgang-lm = { path = ".", editable = true }
+
+[tool.pixi.feature.cloud.target.linux-64.dependencies]
+pytorch-cuda = "12.1"
+
+[tool.pixi.environments]
+default = { features = [], solve-group = "default" }
+cloud = { features = ["cloud"], solve-group = "cloud" }
+
+[tool.pixi.tasks]
