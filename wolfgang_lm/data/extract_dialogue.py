@@ -16,7 +16,7 @@ load_dotenv()
 
 # Configuration
 SOURCE_DIR = "data_clean/gespraeche"
-OUTPUT_FILE = "data_clean/dataset_finetuning.jsonl"
+OUTPUT_FILE = "data_clean/gespraeche.jsonl"
 API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL_NAME = "gemini-3-flash-preview"
 CHUNK_SIZE = 50000
