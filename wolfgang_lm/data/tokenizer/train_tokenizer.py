@@ -9,7 +9,13 @@ from tokenizers.decoders import ByteLevel as ByteLevelDecoder
 CORPUS_FILE = "data_clean/corpus_pretrain.txt"
 OUTPUT_FILE = "data_clean/tokenizer.json"
 VOCAB_SIZE = 32768  # Standard small-mid model size
-SPECIAL_TOKENS = ["<|endoftext|>", "<|padding|>"]
+SPECIAL_TOKENS = [
+    "<|endoftext|>",
+    "<|padding|>",
+    "<|system|>",
+    "<|user|>",
+    "<|assistant|>",
+]
 
 
 def train_tokenizer():
