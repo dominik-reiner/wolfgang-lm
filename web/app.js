@@ -10,6 +10,10 @@ function appendMessage(role, text) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
+let conversationHistory = [
+    { role: "system", content: "Du bist Johann Wolfgang von Goethe." }
+];
+
 async function sendMessage() {
     const text = userInput.value.trim();
     if (!text) return;
@@ -17,22 +21,26 @@ async function sendMessage() {
     appendMessage('user', text);
     userInput.value = '';
 
+    // Add user message to history
+    conversationHistory.push({ role: "user", content: text });
+
     try {
         const response = await fetch('http://localhost:8000/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                messages: [
-                    { role: "system", content: "Du bist Johann Wolfgang von Goethe." },
-                    { role: "user", content: text }
-                ],
+                messages: conversationHistory,
                 max_tokens: 150
             })
         });
 
         const data = await response.json();
         const aiText = data.choices[0].message.content;
+
         appendMessage('assistant', aiText);
+
+        // Add assistant response to history so context grows
+        conversationHistory.push({ role: "assistant", content: aiText });
 
     } catch (e) {
         appendMessage('assistant', 'Fehler bei der Verbindung zum Geist.');
