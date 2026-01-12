@@ -68,6 +68,11 @@ async def chat_completions(req: ChatCompletionRequest):
             prompt += f"<|assistant|>\n{msg.content}\n"
     prompt += "<|assistant|>\n"
 
+    # Stop tokens
+    user_token_id = generator.tokenizer.token_to_id("<|user|>")
+    end_token_id = generator.tokenizer.token_to_id("<|endoftext|>")
+    stop_tokens = [user_token_id, end_token_id]
+
     # 2. Generate
     output_text = generator.generate(
         prompt,
@@ -76,6 +81,7 @@ async def chat_completions(req: ChatCompletionRequest):
         top_k=req.top_k,
         top_p=req.top_p,
         include_prompt=False,
+        stop_tokens=stop_tokens,
     )
 
     return {
