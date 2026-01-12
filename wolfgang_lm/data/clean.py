@@ -6,8 +6,6 @@ from pathlib import Path
 # Configuration
 SOURCE_DIR = "data"
 DEST_DIR = "data_clean"
-BELLETRISTIK_DIR = os.path.join(SOURCE_DIR, "Belletristik")
-GESPRAECHE_DIR = os.path.join(SOURCE_DIR, "gespraeche")
 
 
 def clean_artifacts(text):
@@ -67,19 +65,28 @@ def process_file(filepath, dest_subdir):
 def main():
     print("Starting Preprocessing...")
 
-    # Process Belletristik
-    belletristik_files = glob.glob(os.path.join(BELLETRISTIK_DIR, "*.txt"))
-    print(f"Found {len(belletristik_files)} Belletristik files.")
+    # Categories to process
+    # Categories to process
+    categories = [
+        "Belletristik_Core",
+        "Belletristik_Ext",
+        "Wissenschaft",
+        "Gebrauchsliteratur",
+        "Zeitung",
+        "gespraeche",
+    ]
 
-    for f in belletristik_files:
-        process_file(f, "Belletristik")
+    for category in categories:
+        source_subdir = os.path.join(SOURCE_DIR, category)
+        if not os.path.exists(source_subdir):
+            print(f"Skipping {category} (not found in {SOURCE_DIR})")
+            continue
 
-    # Process Gespraeche
-    gespraeche_files = glob.glob(os.path.join(GESPRAECHE_DIR, "*.txt"))
-    print(f"Found {len(gespraeche_files)} Gespraeche files.")
+        files = glob.glob(os.path.join(source_subdir, "*.txt"))
+        print(f"Found {len(files)} files in {category}.")
 
-    for f in gespraeche_files:
-        process_file(f, "gespraeche")
+        for f in files:
+            process_file(f, category)
 
     print("Preprocessing complete. Output in 'data_clean/'.")
 
