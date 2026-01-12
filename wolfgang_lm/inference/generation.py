@@ -35,7 +35,15 @@ class WolfgangGenerator:
             self.config = config_dict
 
         self.model = WolfgangGPT(self.config)
-        self.model.load_state_dict(checkpoint["model"])
+
+        # Fix state dict keys if model was compiled (remove _orig_mod prefix)
+        state_dict = checkpoint["model"]
+        unwanted_prefix = "_orig_mod."
+        for k, v in list(state_dict.items()):
+            if k.startswith(unwanted_prefix):
+                state_dict[k[len(unwanted_prefix) :]] = state_dict.pop(k)
+
+        self.model.load_state_dict(state_dict)
         self.model.to(self.device)
         self.model.eval()
 
@@ -47,6 +55,7 @@ class WolfgangGenerator:
         top_k=200,
         top_p=1.0,
         include_prompt=False,
+        stop_tokens=None,
     ):
         # Encode
         ids = self.tokenizer.encode(prompt).ids
@@ -93,8 +102,18 @@ class WolfgangGenerator:
                 # sample
                 idx_next = torch.multinomial(probs, num_samples=1)
 
+                # stop condition
+                if stop_tokens is not None and idx_next.item() in stop_tokens:
+                    break
+
                 # append
                 idx = torch.cat((idx, idx_next), dim=1)
+
+                # Debug logging
+                # token_str = self.tokenizer.decode([idx_next.item()])
+                # print(
+                #     f"Step {_}: Generated '{token_str}' | Context: {idx.shape[1]} tokens"
+                # )
 
         # Decode
         if include_prompt:
