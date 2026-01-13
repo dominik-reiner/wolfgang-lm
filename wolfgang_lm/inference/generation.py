@@ -54,8 +54,10 @@ class WolfgangGenerator:
         temperature=0.8,
         top_k=200,
         top_p=1.0,
+        repetition_penalty=1.2,
         include_prompt=False,
         stop_tokens=None,
+        seed=None,
     ):
         # Encode
         ids = self.tokenizer.encode(prompt).ids
@@ -63,6 +65,8 @@ class WolfgangGenerator:
 
         # Generate
         with torch.no_grad():
+            if seed is not None:
+                torch.manual_seed(seed)
             for _ in range(max_new_tokens):
                 # crop context
                 idx_cond = idx[:, -self.config.block_size :]
@@ -70,6 +74,19 @@ class WolfgangGenerator:
                 # forward
                 logits, _ = self.model(idx_cond)
                 logits = logits[:, -1, :] / temperature
+
+                # repetition penalty
+                # Implements CTRL (Keskar et al., 2019) repetition penalty.
+                # If score < 0: multiply by penalty (make more negative).
+                # If score > 0: divide by penalty (shrink towards 0).
+                if repetition_penalty != 1.0:
+                    for i in range(logits.shape[0]):
+                        unique_tokens = torch.unique(idx[i])
+                        logits[i, unique_tokens] = torch.where(
+                            logits[i, unique_tokens] < 0,
+                            logits[i, unique_tokens] * repetition_penalty,
+                            logits[i, unique_tokens] / repetition_penalty,
+                        )
 
                 # top-k
                 if top_k is not None:
@@ -109,15 +126,13 @@ class WolfgangGenerator:
                 # append
                 idx = torch.cat((idx, idx_next), dim=1)
 
-                # Debug logging
-                # token_str = self.tokenizer.decode([idx_next.item()])
-                # print(
-                #     f"Step {_}: Generated '{token_str}' | Context: {idx.shape[1]} tokens"
-                # )
-
         # Decode
         if include_prompt:
             output_text = self.tokenizer.decode(idx[0].tolist())
         else:
             output_text = self.tokenizer.decode(idx[0, len(ids) :].tolist())
+
+        # Cleanup: Replace sentencepiece underscore if present (Lazy Fix)
+        output_text = output_text.replace("\u2581", " ").replace("_", " ")
+
         return output_text
