@@ -1,5 +1,6 @@
 from typing import Literal
 import os
+import csv
 import time
 import math
 import numpy as np
@@ -20,6 +21,19 @@ def train(train_config: TrainingConfig, model_config: ModelConfig):
     print(model_config)
 
     os.makedirs(train_config.out_dir, exist_ok=True)
+
+    # Initialize log files
+    train_log_path = os.path.join(train_config.out_dir, "train_log.csv")
+    val_log_path = os.path.join(train_config.out_dir, "val_log.csv")
+
+    # Write headers
+    with open(train_log_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["iter", "loss", "ppl", "grad_norm", "lr", "time_ms"])
+
+    with open(val_log_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["iter", "train_loss", "train_ppl", "val_loss", "val_ppl"])
     torch.manual_seed(1337)
     # TensorFloat-32 (TF32) Logic:
     torch.backends.cuda.matmul.allow_tf32 = True  # Allow TF32 on Ampere
@@ -115,8 +129,19 @@ def train(train_config: TrainingConfig, model_config: ModelConfig):
 
     # Optimizer
     optimizer = model.configure_optimizers(
+        # AdamW Update (Sequential):
+        # 1. Weight Decay: theta = theta - lr * weight_decay * theta
+        #    (This "shrinks" the weights directly, decoupled from gradients)
         weight_decay=1e-1,
         learning_rate=train_config.learning_rate,
+        # Betas (Adam): (beta1, beta2) configures the optimizer's "memory".
+        # m_t = beta1 * m_{t-1} + (1 - beta1) * g_t          (First Moment: Momentum)
+        # v_t = beta2 * v_{t-1} + (1 - beta2) * g_t^2        (Second Moment: Variance)
+        # Where: m=moving avg of gradient, v=moving avg of squared gradient, g_t=current gradient.
+        # We use beta2=0.95 (vs default 0.999) to shorten the memory horizon for variance,
+        # allowing the model to recover faster from gradient spikes common in LLMs.
+        # Final Update (simplified):
+        # theta_new = theta_new - lr * m_t / (sqrt(v_t) + epsilon)
         betas=(0.9, 0.95),
         device_type=device_type,
     )
@@ -181,14 +206,18 @@ def train(train_config: TrainingConfig, model_config: ModelConfig):
                 loss = loss / train_config.gradient_accumulation_steps
 
             # Backward Pass
+            # This populates the .grad attribute for every parameter p (p.grad).
             loss.backward()
 
             # Prefetch the next batch
             X, Y = get_batch("train")
 
         # Gradient Clipping
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
+        # Optimizer Step:
+        # The optimizer holds references to all model parameters (from model.configure_optimizers).
+        # It iterates over these parameters and uses p.grad to update p.data.
         optimizer.step()
 
         # Reset Gradients
@@ -202,8 +231,21 @@ def train(train_config: TrainingConfig, model_config: ModelConfig):
             print("EVAL")
             print(
                 f"step {iter_num}: train loss {losses['train']:.4f}, "
-                f"val loss {losses['val']:.4f}"
+                f"train ppl {math.exp(losses['train']):.4f}, "
+                f"val loss {losses['val']:.4f}, "
+                f"val ppl {math.exp(losses['val']):.4f}"
             )
+            with open(val_log_path, "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(
+                    [
+                        iter_num,
+                        losses["train"].item(),
+                        math.exp(losses["train"]),
+                        losses["val"].item(),
+                        math.exp(losses["val"]),
+                    ]
+                )
 
             # Save Checkpoint
             if losses["val"] < best_val_loss or train_config.always_save_checkpoint:
@@ -227,11 +269,19 @@ def train(train_config: TrainingConfig, model_config: ModelConfig):
         t0 = t1
         if iter_num % train_config.log_interval == 0:
             lossf = loss.item() * train_config.gradient_accumulation_steps
+            try:
+                ppl = math.exp(lossf)
+            except OverflowError:
+                ppl = float("inf")
+
             print("LOG")
             print(
-                f"iter {iter_num}: loss {lossf:.4f}, "
-                f"time {dt*1000:.2f}ms, lr {lr:.4e}"
+                f"iter {iter_num}: loss {lossf:.4f}, ppl {ppl:.2f}, "
+                f"norm {grad_norm:.4f}, time {dt*1000:.2f}ms, lr {lr:.4e}"
             )
+            with open(train_log_path, "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([iter_num, lossf, ppl, grad_norm.item(), lr, dt * 1000])
 
         # Checkpoint
         if iter_num > 0 and iter_num % 1000 == 0:
@@ -246,6 +296,22 @@ def train(train_config: TrainingConfig, model_config: ModelConfig):
             ckpt_path = os.path.join(train_config.out_dir, f"ckpt_{iter_num}.pt")
             print(f"Saving checkpoint to {ckpt_path}")
             torch.save(checkpoint, ckpt_path)
+
+    # -----------------------------------------------------------------------------
+    # Save Final Checkpoint
+    # -----------------------------------------------------------------------------
+    print("Saving Final Checkpoint...")
+    checkpoint = {
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "model_config": asdict(model_config),
+        "train_config": asdict(train_config),
+        "iter_num": train_config.max_iters,
+        "best_val_loss": best_val_loss,
+    }
+    ckpt_path = os.path.join(train_config.out_dir, "ckpt_final.pt")
+    print(f"Saving checkpoint to {ckpt_path}")
+    torch.save(checkpoint, ckpt_path)
 
     print("Training Complete.")
     return best_val_loss
