@@ -24,8 +24,8 @@ def train(
     os.makedirs(train_config.out_dir, exist_ok=True)
 
     # Initialize log files
-    train_log_path = os.path.join(train_config.out_dir, "train_log.csv")
-    val_log_path = os.path.join(train_config.out_dir, "val_log.csv")
+    train_log_path = os.path.join(train_config.out_dir, "train_finetune_log.csv")
+    val_log_path = os.path.join(train_config.out_dir, "val_finetune_log.csv")
 
     # Write headers
     with open(train_log_path, "w", newline="") as f:
