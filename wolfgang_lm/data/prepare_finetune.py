@@ -78,19 +78,20 @@ def main():
                 is_assistant = False
 
             chunk_ids = tokenizer.encode(text).ids
+
+            # Append EOS token to every message
+            eos_ids = tokenizer.encode(TOK_END).ids
+            chunk_ids.extend(eos_ids)
+
             ids_list.extend(chunk_ids)
 
             # Create labels: -1 for non-assistant, copy ids for assistant
             if is_assistant:
+                # Assistant: Train on content AND the EOS token
                 labels_list.extend(chunk_ids)
             else:
+                # User/System: Ignore everything (content + EOS)
                 labels_list.extend([-1] * len(chunk_ids))
-
-        # Append End of Text
-        chunk_ids = tokenizer.encode(TOK_END).ids
-        ids_list.extend(chunk_ids)
-        # Model should learn to stop, so we train on the EOS token
-        labels_list.extend(chunk_ids)
 
         # Check length
         if len(ids_list) > MAX_SEQ_LEN:
