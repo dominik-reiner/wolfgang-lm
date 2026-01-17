@@ -12,6 +12,7 @@ dependencies = [
     "numpy",
     "tokenizers",
     "python-dotenv",
+    "setuptools",
 ]
 
 [tool.setuptools.packages.find]
@@ -34,7 +35,12 @@ tqdm = "*"
 wolfgang-lm = { path = ".", editable = true }
 
 [tool.pixi.feature.cloud.target.linux-64.dependencies]
+pytorch = "2.4.0"
 pytorch-cuda = "12.1"
+cuda-version = "12.1"
+
+[tool.pixi.feature.cloud.target.linux-64.pypi-dependencies]
+triton = "==3.0.0"
 
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }
