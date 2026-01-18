@@ -1,6 +1,9 @@
 import os
+import time
+import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List
 from wolfgang_lm.inference.generation import WolfgangGenerator
@@ -28,9 +31,10 @@ class Message(BaseModel):
 class ChatCompletionRequest(BaseModel):
     messages: List[Message]
     max_tokens: int = 100
-    temperature: float = 0.8
+    temperature: float = 0.5
     top_p: float = 0.9
     top_k: int = 200
+    stream: bool = False
 
 
 @app.on_event("startup")
@@ -39,7 +43,7 @@ async def startup_event():
     print("Loading Model...")
 
     # Paths (Assume running from root)
-    ckpt_path = "out-pretrain/ckpt_final.pt"
+    ckpt_path = "out-finetune/finetune_ckpt.pt"
     tokenizer_path = "data_clean/tokenizer.json"
 
     if not os.path.exists(ckpt_path):
@@ -52,29 +56,100 @@ async def startup_event():
 
 @app.post("/v1/chat/completions")
 async def chat_completions(req: ChatCompletionRequest):
+    print("\n" + "=" * 60)
+    print(f"📥 REQUEST RECEIVED at {time.strftime('%H:%M:%S')}")
+    print(
+        f"📊 Config: temp={req.temperature:.2f}, top_p={req.top_p:.2f}, "
+        f"top_k={req.top_k}, max_tokens={req.max_tokens}"
+    )
+
     if not generator:
+        print("❌ Error: Model not loaded")
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     # 1. Format Prompt
-    # Simple formatting: User: ... \n Assistant: ...
-    # Ideally use the same template as training
-    prompt = ""
-    for msg in req.messages:
-        if msg.role == "system":
-            prompt += f"<|system|>\n{msg.content}\n"
-        elif msg.role == "user":
-            prompt += f"<|user|>\n{msg.content}\n"
-        elif msg.role == "assistant":
-            prompt += f"<|assistant|>\n{msg.content}\n"
-    prompt += "<|assistant|>\n"
-
-    # Stop tokens
     user_token_id = generator.tokenizer.token_to_id("<|user|>")
     end_token_id = generator.tokenizer.token_to_id("<|endoftext|>")
     stop_tokens = [user_token_id, end_token_id]
 
-    # 2. Generate
-    output_text = generator.generate(
+    # <|role|>\nContent\n<|endoftext|>
+    prompt = ""
+    for msg in req.messages:
+        content = msg.content
+        if msg.role == "system":
+            prompt += f"<|system|>\n{content}\n<|endoftext|>"
+        elif msg.role == "user":
+            prompt += f"<|user|>\n{content}\n<|endoftext|>"
+        elif msg.role == "assistant":
+            prompt += f"<|assistant|>\n{content}\n<|endoftext|>"
+
+    # Prompt for the new generation
+    prompt += "<|assistant|>\n"
+
+    print(f"\n📝 PROMPT ({len(prompt)} chars):")
+    print("-" * 20)
+    print(prompt.strip())
+    print("-" * 20)
+    print("🤖 Generating...", end="", flush=True)
+
+    start_time = time.perf_counter()
+
+    # 2. Generator Logic
+    if req.stream:
+        return StreamingResponse(
+            stream_generator(prompt, req, stop_tokens), media_type="text/event-stream"
+        )
+    else:
+        # Non-streaming generation
+        output_text = generator.generate(
+            prompt,
+            max_new_tokens=req.max_tokens,
+            temperature=req.temperature,
+            top_k=req.top_k,
+            top_p=req.top_p,
+            include_prompt=False,
+            stop_tokens=stop_tokens,
+        )
+
+        duration = time.perf_counter() - start_time
+        print(f" Done! ({duration:.2f}s)")
+        print(f"\n📤 OUTPUT ({len(output_text)} chars):")
+        print("-" * 20)
+        print(output_text.strip())
+        print("-" * 20)
+        print("=" * 60 + "\n")
+
+        return {
+            "id": "chatcmpl-wolfgang",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": "wolfgang-lm-v1",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": output_text},
+                    "finish_reason": "length",
+                }
+            ],
+        }
+
+
+def stream_generator(prompt, req, stop_tokens):
+
+    # Send initial chunk with role
+    chunk_data = {
+        "id": "chatcmpl-wolfgang",
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": "wolfgang-lm-v1",
+        "choices": [
+            {"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}
+        ],
+    }
+    yield f"data: {json.dumps(chunk_data)}\n\n"
+
+    # Stream content
+    for text_chunk in generator.generate(
         prompt,
         max_new_tokens=req.max_tokens,
         temperature=req.temperature,
@@ -82,18 +157,26 @@ async def chat_completions(req: ChatCompletionRequest):
         top_p=req.top_p,
         include_prompt=False,
         stop_tokens=stop_tokens,
-    )
+        stream=True,
+    ):
+        chunk_data = {
+            "id": "chatcmpl-wolfgang",
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": "wolfgang-lm-v1",
+            "choices": [
+                {"index": 0, "delta": {"content": text_chunk}, "finish_reason": None}
+            ],
+        }
+        yield f"data: {json.dumps(chunk_data)}\n\n"
 
-    return {
+    # Final 'done' chunk to signify stop
+    chunk_data = {
         "id": "chatcmpl-wolfgang",
-        "object": "chat.completion",
-        "created": 0,
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
         "model": "wolfgang-lm-v1",
-        "choices": [
-            {
-                "index": 0,
-                "message": {"role": "assistant", "content": output_text},
-                "finish_reason": "length",
-            }
-        ],
+        "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
     }
+    yield f"data: {json.dumps(chunk_data)}\n\n"
+    yield "data: [DONE]\n\n"

@@ -1,4 +1,5 @@
 import os
+from collections import deque
 import torch
 import torch.nn.functional as F
 from tokenizers import Tokenizer
@@ -47,31 +48,25 @@ class WolfgangGenerator:
         self.model.to(self.device)
         self.model.eval()
 
-    def generate(
+    def _generate_token_stream(
         self,
-        prompt,
-        max_new_tokens=100,
-        temperature=0.8,
-        top_k=200,
-        top_p=1.0,
-        repetition_penalty=1.2,
-        include_prompt=False,
-        stop_tokens=None,
-        seed=None,
+        idx,
+        max_new_tokens,
+        temperature,
+        top_k,
+        top_p,
+        repetition_penalty,
+        stop_tokens,
+        seed,
     ):
-        # Encode
-        ids = self.tokenizer.encode(prompt).ids
-        idx = torch.tensor(ids, dtype=torch.long, device=self.device).unsqueeze(0)
-
-        # Generate
         with torch.no_grad():
             if seed is not None:
                 torch.manual_seed(seed)
-            for _ in range(max_new_tokens):
-                # crop context
-                idx_cond = idx[:, -self.config.block_size :]
 
-                # forward
+            for _ in range(max_new_tokens):
+                # cut sequence to block size from the end
+                # TODO: implement sliding window for longer sequences
+                idx_cond = idx[:, -self.config.block_size :]
                 logits, _ = self.model(idx_cond)
                 logits = logits[:, -1, :] / temperature
 
@@ -88,51 +83,102 @@ class WolfgangGenerator:
                             logits[i, unique_tokens] / repetition_penalty,
                         )
 
-                # top-k
                 if top_k is not None:
                     v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                     logits[logits < v[:, [-1]]] = -float("Inf")
 
-                # top-p (nucleus sampling)
                 if top_p < 1.0:
                     sorted_logits, sorted_indices = torch.sort(logits, descending=True)
                     cumulative_probs = torch.cumsum(
                         F.softmax(sorted_logits, dim=-1), dim=-1
                     )
-
-                    # Remove tokens with cumulative probability above the threshold
                     sorted_indices_to_remove = cumulative_probs > top_p
-                    # Shift the indices to the right to keep also the first token above the threshold
                     sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[
                         ..., :-1
                     ].clone()
                     sorted_indices_to_remove[..., 0] = 0
-
                     indices_to_remove = sorted_indices_to_remove.scatter(
                         1, sorted_indices, sorted_indices_to_remove
                     )
                     logits[indices_to_remove] = -float("Inf")
 
-                # softmax
                 probs = F.softmax(logits, dim=-1)
-
-                # sample
                 idx_next = torch.multinomial(probs, num_samples=1)
 
-                # stop condition
                 if stop_tokens is not None and idx_next.item() in stop_tokens:
                     break
 
-                # append
                 idx = torch.cat((idx, idx_next), dim=1)
+                yield idx
 
-        # Decode
+    def _decode_stream(self, token_stream, input_len):
+        curr_text_len = 0
+        for idx in token_stream:
+            # Decode valid text so far from the generated part
+            # Note: We must decode the whole sequence, not just the new token, because
+            # tokens can represent partial bytes (like for emojis/utf-8).
+            # "Partial Token A" + "Partial Token B" -> "Valid Character"
+            # Decoding them separately would result in garbage/error symbols.
+            full_gen_text = self.tokenizer.decode(idx[0, input_len:].tolist())
+
+            # Fix sentencepiece underscores
+            full_gen_text = full_gen_text.replace("\u2581", " ").replace("_", " ")
+
+            # If the text ends with a replacement character (), it means we likely
+            # split a multi-byte character. We wait for more tokens to complete it.
+            if full_gen_text.endswith("\ufffd"):
+                continue
+
+            # Yield the difference
+            new_text = full_gen_text[curr_text_len:]
+            if new_text:
+                yield new_text
+                curr_text_len = len(full_gen_text)
+
+    def generate(
+        self,
+        prompt,
+        max_new_tokens=100,
+        temperature=0.8,
+        top_k=200,
+        top_p=1.0,
+        repetition_penalty=1.2,
+        include_prompt=False,
+        stop_tokens=None,
+        seed=None,
+        stream=False,
+    ):
+        # Encode
+        ids = self.tokenizer.encode(prompt).ids
+        # shape (1, seq_len)
+        idx = torch.tensor(ids, dtype=torch.long, device=self.device).unsqueeze(0)
+        input_len = len(ids)
+
+        token_stream = self._generate_token_stream(
+            idx,
+            max_new_tokens,
+            temperature,
+            top_k,
+            top_p,
+            repetition_penalty,
+            stop_tokens,
+            seed,
+        )
+
+        if stream:
+            return self._decode_stream(token_stream, input_len)
+
+        # Consume the generator efficiently to get the complete sequence
+        try:
+            idx = deque(token_stream, maxlen=1)[-1]
+        except IndexError:
+            # Generator was empty (e.g. max_new_tokens=0), so idx remains the prompt
+            pass
+
+        # Final decode
         if include_prompt:
             output_text = self.tokenizer.decode(idx[0].tolist())
         else:
-            output_text = self.tokenizer.decode(idx[0, len(ids) :].tolist())
+            output_text = self.tokenizer.decode(idx[0, input_len:].tolist())
 
-        # Cleanup: Replace sentencepiece underscore if present (Lazy Fix)
-        output_text = output_text.replace("\u2581", " ").replace("_", " ")
-
-        return output_text
+        return output_text.replace("\u2581", " ").replace("_", " ")
