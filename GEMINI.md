@@ -18,6 +18,9 @@ You MUST adhere to the following rules:
 *   **Comments (CRITICAL)**:
     *   **"HOW and WHY"**: For complex logic, you MUST write concise comments explaining *how* it works and *why* it is implemented that way.
     *   **Preservation**: **NEVER DELETE EXISTING COMMENTS.** If code is refactored, update the comments, but do not remove explanations unless they are undeniably obsolete and misleading.
+*   **Researching and Verifying**:
+    *   **ALWAYS** verify best practises online before implementing something.
+    *   **Critically** question assumptions and verify them.
 
 ## 3. Data Safety
 *   **Restricted Areas**: `data*/` and `out-*/` directories contain massive binary/text files.
