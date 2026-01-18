@@ -148,6 +148,8 @@ def stream_generator(prompt, req, stop_tokens):
     }
     yield f"data: {json.dumps(chunk_data)}\n\n"
 
+    full_response = ""
+
     # Stream content
     for text_chunk in generator.generate(
         prompt,
@@ -159,6 +161,7 @@ def stream_generator(prompt, req, stop_tokens):
         stop_tokens=stop_tokens,
         stream=True,
     ):
+        full_response += text_chunk
         chunk_data = {
             "id": "chatcmpl-wolfgang",
             "object": "chat.completion.chunk",
@@ -169,6 +172,13 @@ def stream_generator(prompt, req, stop_tokens):
             ],
         }
         yield f"data: {json.dumps(chunk_data)}\n\n"
+
+    # Log the full output
+    print(f"\n📤 OUTPUT ({len(full_response)} chars):")
+    print("-" * 20)
+    print(full_response.strip())
+    print("-" * 20)
+    print("=" * 60 + "\n")
 
     # Final 'done' chunk to signify stop
     chunk_data = {
