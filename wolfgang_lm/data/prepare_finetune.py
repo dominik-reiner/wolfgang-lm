@@ -64,7 +64,7 @@ def main():
 
         for msg in conv:
             role = msg.get("role")
-            content = msg.get("content", "")
+            content = msg.get("content", "").strip()
 
             if role == "system":
                 text = f"{TOK_SYSTEM}\n{content}\n"

@@ -80,7 +80,7 @@ async def chat_completions(req: ChatCompletionRequest):
     # <|role|>\nContent\n<|endoftext|>
     prompt = ""
     for msg in req.messages:
-        content = msg.content
+        content = msg.content.strip()
         if msg.role == "system":
             prompt += f"<|system|>\n{content}\n<|endoftext|>"
         elif msg.role == "user":
