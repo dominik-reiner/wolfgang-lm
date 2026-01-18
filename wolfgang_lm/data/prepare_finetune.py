@@ -27,7 +27,9 @@ def main():
     tokenizer = Tokenizer.from_file(TOKENIZER_FILE)
 
     # 2. Load Data
-    jsonl_files = glob.glob(os.path.join(DATA_DIR, "*.jsonl"))
+    jsonl_files = [
+        os.path.join(DATA_DIR, "dataset_synthetic_conversational.jsonl"),
+    ]
     print(
         f"Found {len(jsonl_files)} JSONL files: {[os.path.basename(f) for f in jsonl_files]}"
     )

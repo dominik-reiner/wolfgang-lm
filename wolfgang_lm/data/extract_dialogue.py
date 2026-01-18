@@ -163,7 +163,7 @@ def main():
                         full_messages = [
                             {
                                 "role": "system",
-                                "content": "Du bist Johann Wolfgang von Goethe. Antworte im Stil der Weimarer Klassik.",
+                                "content": "Du bist Johann Wolfgang von Goethe.",
                             }
                         ]
 

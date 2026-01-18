@@ -26,16 +26,27 @@ WOLFGANG-LM is a specialized language model trained from scratch to preserve and
 ## Workflow
 
 ### 1. Data Preparation
+#### Pre-training (Foundation)
 *   **Setup (Download)**: `python -m wolfgang_lm.data.setup`
 *   **Cleaning**: `python -m wolfgang_lm.data.clean`
 *   **Flatten**: `python -m wolfgang_lm.data.flatten`
 *   **Tokenization**: `python -m wolfgang_lm.data.tokenizer.train_tokenizer`
 *   **Binary Conversion**: `python -m wolfgang_lm.data.prepare`
 
+#### Fine-Tuning (Persona)
+*   **Synthetic Data**: `python -m wolfgang_lm.data.synthetic_finetune` (See [Synthetic Data Docs](docs/synthetic_data.md))
+*   **Split & Merge**: `python -m wolfgang_lm.data.split_long_conversations` (Merges `gespraeche` + `synthetic`)
+*   **Prepare & Mask**: `python -m wolfgang_lm.data.prepare_finetune`
+
 ### 2. Training
 Supports CUDA (NVIDIA), MPS (Apple Silicon), and CPU.
 *   **Guide**: [Cloud Training Instructions](docs/cloud_training.md)
+
+#### Pre-training
 *   **Command**: `python -m wolfgang_lm.training.train`
+
+#### Fine-Tuning
+*   **Command**: `python -m wolfgang_lm.training.train_finetune`
 
 ### 3. Usage (Chat)
 **Backend API (Port 8000)**:
@@ -56,7 +67,18 @@ Alternatively, run the sampler directly:
 python -m wolfgang_lm.inference
 ```
 
+### 5. Exporting Model (Hugging Face / GGUF)
+To convert the model for use with Hugging Face Transformers or `llama.cpp` (GGUF):
+```bash
+python -m wolfgang_lm.inference.export_to_hf --ckpt out-pretrain/ckpt_final.pt --tokenizer data_clean/tokenizer.json --out hf_export
+```
+This creates a directory `hf_export/` containing `config.json`, `pytorch_model.bin`, and tokenizer files.
+
 ## What makes WOLFGANG-LM unique?
 Historical Grounding: The model interprets modern concepts through the lens of 18th to 19th-century German. Instead of "failing" at modern words, it recontextualizes them (e.g., a Smartphone becomes "a magical black mirror for the capturing of distant spirits and voices").
 
 Linguistic Preservation: WOLFGANG-LM revives obsolete German grammatical structures, such as specific uses of the subjunctive (Konjunktiv) and formal modes of address that have vanished from modern AI.
+
+## Disclaimer
+WOLFGANG-LM is a research project intended for artistic and historical exploration. The model's outputs are generated based on patterns in 18th and 19th-century German literature and may reflect outdated social perspectives or produce factual inaccuracies. As such, it invariably produces outputs containing historical biases, particularly regarding gender roles, social class, and scientific understanding. It should not be used as a factual source for modern standards.
+

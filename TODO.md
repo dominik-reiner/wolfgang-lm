@@ -1,28 +1,37 @@
 # Project Roadmap & TODOs
 
-## missing Control Tokens
-- [ ] **Update Tokenizer**: The current tokenizer (`train_tokenizer.py`) only defines `<|endoftext|>` and `<|padding|>`. We need to add conversational control tokens:
-  - `<|system|>`
-  - `<|user|>`
-  - `<|assistant|>`
-- [ ] **Regenerate Tokenizer**: Run `train_tokenizer.py` to produce the updated `tokenizer.json` containing these special tokens.
-
-## Data Pipeline for Fine-Tuning
-- [ ] **Create `prepare_finetune.py`**: A new script is needed to process `dataset_finetuning.jsonl`.
-  - **Logic**: Read JSONL -> Apply Format (`<|user|>...<|assistant|>...`) -> Tokenize -> Save to binary (`finetune.bin`).
-  - **Splits**: Create distinct `train` and `val` splits for the fine-tuning phase.
-
-## Fine-Tuning Training Script
-- [ ] **Create `train_finetune.py`**: The current `train.py` is designed for pre-training (training from scratch on a raw stream). We need a specialized script for Supervised Fine-Tuning (SFT).
-  - **Load Pre-trained Weights**: Must initialize the model from the `out-pretrain/ckpt_final.pt` checkpoint instead of random initialization.
-  - **Instruction Masking (Optional but Recommended)**: Modify the loss calculation to only penalize the model for the *Assistant's* response, ignoring the *User's* prompt (loss masking).
-  - **Stop Tokens**: Ensure the training considers the end-of-turn tokens correctly.
-
 ## Inference & Server
-- [ ] **Update `server.py`**:
-  - The hardcoded template in `server.py` (L61-L70) must match exactly what `prepare_finetune.py` produces.
-- [ ] **Update Generation Logic**:
-  - The model should be configured to stop generating when it encounters `<|user|>` or `<|endoftext|>`.
+- [ ] **Implement KV Cache**:
+  - Update `WolfgangGPT` to support caching of Key/Value states during generation to speed up inference (O(N) instead of O(N^2)).
 
-## General
-- [ ] **Model config**: Ensure `vocab_size` in `ModelConfig` matches the updated tokenizer size if new tokens push it beyond the limit (though usually we stay within the fixed vocabulary size).
+# Future Roadmap: Wolfgang-LM V2 (Deep Reasoning Edition)
+Moving to a **smaller vocabulary** and **more layers** to align with state-of-the-art research for small models (like Meta's *MobileLLM*). "Deep and Narrow" creates significantly smarter reasoning engines for the same parameter cost.
+
+### 1. Strategy: Reallocate "Vocabulary Tax"
+- **Current V1:** 32k Vocab, 12 Layers (Wide & Shallow).
+- **Proposed V2:** 8k Vocab, 24 Layers (Deep & Narrow).
+- **Math:** Reducing vocab from 32k to 8k saves ~18M parameters. Reducing dim from 640 to 384 saves more. Reinvest these into doubling the depth (12 -> 24 layers).
+
+### 2. Architecture Spec
+| Feature | V1 (Current) | **V2 (Deep & Narrow)** | Why V2? |
+| --- | --- | --- | --- |
+| **Layers** | 12 | **24** | **Reasoning Depth:** Logic requires serial steps. |
+| **Embedding Dim** | 640 | **384** | **Efficiency:** divisible by 64/128. |
+| **Heads (Q/KV)** | 10/5 | **6 / 3** | GQA Factor 2. |
+| **Vocab Size** | 32,768 | **8,192** | **Focus:** Forces model to learn *concepts*. |
+| **Context** | 512 | **1024** | Double context for "free" (memory-wise). |
+
+### 3. Implementation Plan
+- **New Tokenizer**: DO NOT just trim the old one. Train a **new BPE tokenizer** specifically on the 265M token dataset to find the most efficient 8,000 tokens for *this* specific text.
+- **Config Changes**:
+  ```python
+  config = LlamaConfig(
+      vocab_size=8192,
+      hidden_size=384,      # Narrow
+      intermediate_size=1024, # SwiGLU
+      num_hidden_layers=24, # DEEP!
+      num_attention_heads=6,
+      num_key_value_heads=3, # GQA
+      max_position_embeddings=1024
+  )
+  ```
