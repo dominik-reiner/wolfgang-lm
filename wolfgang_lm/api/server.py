@@ -54,6 +54,11 @@ async def startup_event():
     print("Model Loaded Successfully.")
 
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "model_loaded": generator is not None}
+
+
 @app.post("/v1/chat/completions")
 async def chat_completions(req: ChatCompletionRequest):
     print("\n" + "=" * 60)

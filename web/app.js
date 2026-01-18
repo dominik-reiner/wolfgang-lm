@@ -1,6 +1,50 @@
 const chatContainer = document.getElementById('chat-container');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
+const statusContainer = document.getElementById('status-container');
+const statusText = statusContainer.querySelector('.status-text');
+
+// Health Check
+async function checkHealth() {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        const response = await fetch('http://localhost:8000/health', {
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.status === 'ok') {
+                updateStatus(true);
+                return;
+            }
+        }
+        updateStatus(false);
+    } catch (e) {
+        updateStatus(false);
+    }
+}
+
+function updateStatus(isOnline) {
+    if (isOnline) {
+        statusContainer.classList.remove('offline');
+        statusContainer.classList.add('online');
+        statusText.textContent = 'Online';
+    } else {
+        statusContainer.classList.remove('online');
+        statusContainer.classList.add('offline');
+        statusText.textContent = 'Offline';
+    }
+}
+
+// Check every 1 seconds
+setInterval(checkHealth, 1000);
+// Initial check
+checkHealth();
 
 function appendMessage(role, text) {
     const div = document.createElement('div');
