@@ -47,3 +47,5 @@ default = { features = [], solve-group = "default" }
 cloud = { features = ["cloud"], solve-group = "cloud" }
 
 [tool.pixi.tasks]
+server = "uvicorn wolfgang_lm.api.server:app --reload"
+

@@ -62,7 +62,8 @@ Supports CUDA (NVIDIA), MPS (Apple Silicon), and CPU.
 ### 3. Usage (Chat)
 **Backend API (Port 8000)**:
 ```bash
-uvicorn wolfgang_lm.api.server:app --reload --port 8000
+pixi run server
+
 ```
 
 **Frontend Client**:

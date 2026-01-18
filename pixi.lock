@@ -3355,7 +3355,7 @@ packages:
 - pypi: ./
   name: wolfgang-lm
   version: 0.1.0
-  sha256: e65bf1cb44754ad1424b207c05b1e8aafec0687d56ec076acb18183c055e301e
+  sha256: 206eeb8ef206209944c320acb42f27c7415837dfdab7ed506c5cb9268b27ae93
   requires_dist:
   - google-genai
   - numpy
