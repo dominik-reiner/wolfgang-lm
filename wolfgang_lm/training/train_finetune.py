@@ -311,17 +311,17 @@ if __name__ == "__main__":
     train_config.min_lr = 2e-6
 
     # Preventing Overfitting:
-    # Dataset is ~1500 samples.
-    # Batch Size 4 * Grad Accum 4 = 16 samples/step.
-    # ~93 steps per epoch.
-    # 280 steps = ~3.0 epochs.
-    train_config.batch_size = 4
+    # Dataset is ~5000 samples.
+    # Batch Size 8 * Grad Accum 4 = 32 samples/step.
+    # ~155 steps per epoch (5000 / 32).
+    # Target: ~3.0 epochs -> ~500 steps.
+    train_config.batch_size = 8
     train_config.gradient_accumulation_steps = 4
-    train_config.max_iters = 280
-    train_config.warmup_iters = 28  # Warmup for first 10% of training
-    train_config.lr_decay_iters = 280  # Decay down to min_lr by end of training
-    train_config.eval_interval = 20
-    train_config.log_interval = 5
+    train_config.max_iters = 500
+    train_config.warmup_iters = 50  # Warmup for first ~10%
+    train_config.lr_decay_iters = 500  # Decay down to min_lr by end
+    train_config.eval_interval = 50
+    train_config.log_interval = 10
 
     model_config = ModelConfig()
 

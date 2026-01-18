@@ -72,13 +72,11 @@ def main():
             elif role == "user":
                 text = f"{TOK_USER}\n{content}\n"
                 is_assistant = False
-            elif role == "assistant":
+            elif role in ["assistant", "goethe"]:
                 text = f"{TOK_ASSISTANT}\n{content}\n"
                 is_assistant = True
             else:
-                text = f"\n{content}\n"
-                is_assistant = False
-
+                raise ValueError(f"Unknown role: {role}")
             chunk_ids = tokenizer.encode(text).ids
 
             # Append EOS token to every message
@@ -113,7 +111,7 @@ def main():
     random.seed(42)
     random.shuffle(processed_samples)
 
-    split_idx = int(len(processed_samples) * 0.9)
+    split_idx = int(len(processed_samples) * 0.95)
     train_samples = processed_samples[:split_idx]
     val_samples = processed_samples[split_idx:]
 
