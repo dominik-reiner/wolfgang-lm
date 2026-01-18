@@ -30,7 +30,7 @@ async function sendMessage() {
     // 3. Prepare Assistant Message Placeholder
     const assistantDiv = document.createElement('div');
     assistantDiv.className = 'message assistant';
-    assistantDiv.innerHTML = '<div class="content">...</div>'; // Loading state
+    assistantDiv.innerHTML = '<div class="content"><div class="typing-indicator"><span></span><span></span><span></span></div></div>'; // Loading state
     chatContainer.appendChild(assistantDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -39,7 +39,7 @@ async function sendMessage() {
     let firstTokenReceived = false;
 
     try {
-        const stream = false;  // Toggle this to enable/disable streaming
+        const stream = true;
         const response = await fetch('http://localhost:8000/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
