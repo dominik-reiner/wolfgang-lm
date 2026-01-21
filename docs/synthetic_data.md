@@ -2,30 +2,36 @@
 
 To prepare **Wolfgang-LM** for modern chatbot interactions, we use synthetic data generation to bridge the gap between 19th-century literature and 21st-century users.
 
-## Overview
+## Pipeline Architecture
 
-The script `wolfgang_lm/data/synthetic_finetune.py` uses a teacher LLM (**Gemini 3 Flash**) to generate a rich conversational dataset. All system prompts are distinctively **German** and use real Goethe dialogues (`gespraeche.jsonl`) as style references.
+The new generation pipeline (`ScenarioBasedGoetheGenerator`) moves away from simple QA pairs to a robust **3-Stage Process**:
 
-1.  **Modern Concepts**: Explaining ~50 modern topics (Bitcoin, Veganism) with Goethe's worldview.
-2.  **Style Bridge**: Handling slang ("Digga", "Cringe") with dignity.
-3.  **Identity & Safety**: Robustly refusing unsafe requests while staying in character.
-4.  **Personal & Creative**: Answering bio questions details and writing poems/raps.
-5.  **Philosophy & Sage**: Deep dives on timeless human issues.
+### 1. Scenario Generation (The "Director")
+Instead of generating dialogues directly, we first generate a **Scenario** object.
+- **Goal**: Create a rich, hidden context for the interaction.
+- **Structure**:
+  - `user_context`: The user's internal state (e.g., "Stressed student needing a quick summary").
+  - `first_message`: The **exact** opening line (forced strictly to be informal/slang/typo-ridden).
+  - `goethe_perception`: How Goethe *misinterprets* the situation (e.g., "Student asks for summary" -> "Scholar asks for wisdom").
+- **Moods**: Users are simulated with 16 distinct moods (e.g., "Lazy/Functional", "Trolling", "Melancholic"), with a 50% chance of a "Neutral/Functional" state to simulate realism.
 
-## Features
-- **German Prompts**: Native German instructions for better linguistic nuance.
-- **Robustness**: Built-in exponential backoff for API rate limits.
-- **Diversity**: High temperature (0.9) to ensure varied phrasing.
-- **Comprehensive**: Expanded hardcoded input lists for broad coverage.
+### 2. Dialogue Drafting (The "Actor")
+The LLM generates a dialogue based strictly on the scenario.
+- **Stranger Dynamic**: Goethe and the User do **not** know each other. There is no artificial "Hello friend".
+- **Friction as a Feature**: We explicitly optimize for **"Talking Past Each Other"**.
+  - *User*: "yo whatsapp"
+  - *Goethe*: "The world turns in eternal circles..."
+  - This friction creates the immersion of a time-traveling poet connecting to the modern web.
+- **Reference Injection**: Real dialogue snippets from `gespraeche.jsonl` are injected into the prompt to prime the model's tone.
 
-## Setup
-
-Ensure you have a valid Google Gemini API Key.
-Create a `.env` file in the project root if you haven't already:
-
-```bash
-GEMINI_API_KEY=your_api_key_here
-```
+### 3. The Critic (The "Judge")
+An integrated **LLM-as-a-Judge** evaluates every single dialogue before saving.
+- **Checklist**:
+  - Does the User sound lazy/modern? (No perfect high-school German).
+  - Is Goethe staying in character (No "How can I help you?")?
+  - Is there positive friction/misunderstanding?
+  - Is it short (max 5 turns)?
+- **Filter**: Dialogues failing *any* criteria are discarded (0-tolerance policy), ensuring extremely high dataset quality.
 
 ## Usage
 
@@ -35,16 +41,15 @@ Run the generation script:
 pixi run python -m wolfgang_lm.data.synthetic_finetune
 ```
 
-The script will:
-1.  Connect to the Gemini API.
-2.  Generate responses for expanded categories (Casual, Modern, Sage, Philosophy, Safety, Personal, Creative).
-3.  **Inject Real Style**: Samples real Goethe dialogues for authentic tonality.
-4.  **Vary User Persona**: Simulates 5 different user styles (Slang, Academic, etc.).
-5.  Save all results to `data_clean/dataset_synthetic_conversational.jsonl`.
+The script defaults to generating **5,500 samples** distributed as:
+- **50% Chit-Chat/Functional**: Everyday misunderstandings.
+- **30% Deep Talk**: Philosophical alignment.
+- **10% Task Refusal**: Goethe refusing to be a tool.
+- **10% Safety**: Goethe handling toxicity with dignity.
 
-## Integration
-
-After generating this file, run the split script to merge and prepare it for training:
+## Output
+Results are saved to `data_clean/dataset_synthetic_conversational.jsonl`.
+Then proceed to splitting/preprocessing:
 
 ```bash
 pixi run python -m wolfgang_lm.data.split_long_conversations
