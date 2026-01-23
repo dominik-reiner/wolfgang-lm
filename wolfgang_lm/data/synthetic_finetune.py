@@ -17,30 +17,15 @@ load_dotenv()
 class SimulatedMessage(BaseModel):
     role: Literal["user", "goethe"] = Field(
         ...,
-        description="The role of the speaker. 'user' for the modern human, 'goethe' for Goethe.",
+        description="Die Rolle des Sprechers. 'user' für den modernen Menschen, 'goethe' für Goethe.",
     )
-    content: str = Field(..., description="The content of the message in German.")
-
-
-class Scenario(BaseModel):
-    user_context: str = Field(
-        ...,
-        description="The internal context/situation of the user. (Goethe does not know this).",
-    )
-    first_message: str = Field(
-        ...,
-        description="The exact first message the user sends. Realistic, short, can include typos/slang if fits mood.",
-    )
-    goethe_perception: str = Field(
-        ...,
-        description="How Goethe (mis)understands the situation or the user's intent.",
-    )
+    content: str = Field(..., description="Der Inhalt der Nachricht.")
 
 
 class SimulatedDialogue(BaseModel):
     messages: List[SimulatedMessage] = Field(
         ...,
-        description="A sequence of messages alternating between user and goethe. Starting with the user and ending with goethe.",
+        description="Eine Nachrichtenfolge, abwechselnd zwischen User und Goethe. Beginnt mit User, endet mit Goethe.",
     )
 
     @model_validator(mode="after")
@@ -67,27 +52,42 @@ class SimulatedDialogue(BaseModel):
         return self
 
 
+class Scenario(BaseModel):
+    user_context: str = Field(
+        ...,
+        description="Der interne Kontext oder die Situation des Users (Goethe weiß das nicht).",
+    )
+    first_message: str = Field(
+        ...,
+        description="Die exakte erste Nachricht des Users. Realistisch, kurz, kann manchmal Tippfehler/Slang enthalten.",
+    )
+    goethe_perception: str = Field(
+        ...,
+        description="Wie Goethe das Anliegen des Users in seine Zeit/Sprache übersetzt. Er VERSTEHT den Kern, aber drückt es historisch aus.",
+    )
+
+
 class CritiqueResult(BaseModel):
     rating: int = Field(
         ...,
-        description="Rating from 1-10 of how natural and in-character the dialogue is.",
+        description="Bewertung (1-10) der Natürlichkeit und Charaktertreue des Dialogs.",
         ge=1,
         le=10,
     )
     critique: str = Field(
         ...,
-        description="A brief analysis of the dialogue's naturalness, flow, and persona adherence.",
+        description="Kurze Analyse der Natürlichkeit, des Gesprächsflusses und der Rollentreue.",
     )
     requires_refinement: bool = Field(
         ...,
-        description="True if the dialogue is unnatural or bad. False if it is perfect.",
+        description="True, wenn der Dialog unnatürlich oder schlecht ist. False, wenn er gut ist.",
     )
 
 
 class ScenarioBatch(BaseModel):
     scenarios: List[Scenario] = Field(
         ...,
-        description="A list of diverse, detailed scenario objects.",
+        description="Eine Liste von diversen, detaillierten Szenarien.",
     )
 
 
@@ -234,33 +234,28 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
 
         prompt_category_instructions = {
             "chit_chat": (
-                "- Situationen: Smalltalk, Langeweile, Zufällige Begegnung im Chat, Interview.\n"
-                "- Ziel: Lockere Interaktion, die durch Goethes Art seltsam wird."
-            ),
-            "deep_talk": (
-                "- Situationen: Emotionaler Kummer, Fragen über Leben/Tod/Liebe, philosophische Dilemmata, Neugier auf die Welt.\n"
-                "- Ziel: Tiefgründige Verbindung durch Goethes Weisheit."
+                "- Situationen: User tauscht sich locker mit Goethe aus. Der User kann beiläufig moderne Konzepte erwähnen.\n"
+                "- Ziel: Lockere Interaktion. Goethe reagiert auf das Moderne aus seiner historischen Sicht."
             ),
             "task_refusal": (
-                "- Situationen: User will eine E-Mail, Hausaufgaben, Code oder Fakten.\n"
-                "- Ziel: User behandelt Goethe wie einen digitalen Assistenten. Goethe verweigert als Dichter."
+                "- Situationen: User behandelt Goethe wie einen digitalen Assistenten und gibt ihm Aufgaben.\n"
+                "- Ziel: Goethe verweigert als Dichter."
             ),
             "safety": (
                 "- Situationen: Der User ist beleidigend, unangemessen oder verletzt Sicherheitsrichtlinien.\n"
-                "- Ziel: Szenarien, in denen Goethe höflich ablehnt, belehrt und das Gespräch beendet.\n"
+                "- Ziel: Goethe lehnt höflich ab, belehrt den User und beendet das Gespräch.\n"
                 "- Sicherheitsrichtlinien: Keine Charakter-Brüche, keine unethischen, hasserfüllten, illegalen oder erotischen Inhalte."
             ),
         }
 
         prompt = (
-            f"Generiere {count} einzigartige Gesprächsszenarien zwischen einem 'Modernen User' und 'Johann Wolfgang von Goethe'.\n"
-            f"Die User kennen Goethe NICHT persönlich. Für sie ist das ein anonymer Chat oder Bot.\n"
-            f"Verwende für die User folgende Stimmungen (Moods): {moods_str}.\n"
+            f"Generiere {count} einzigartige Gesprächsszenarien zwischen einem 'User' (normaler Mensch aus dem 21. Jahrhundert) und 'Johann Wolfgang von Goethe'.\n"
+            f"Der User kennt Goethe NICHT persönlich. Das Setting ist ein Chat.\n"
+            f"Verwende für den User die folgenden Stimmungen: {moods_str}.\n"
             f"### KATEGORIE: {category.upper()} ###\n"
             f"{prompt_category_instructions.get(category, '')}\n\n"
-            f"WICHTIG für 'User Style':\n"
-            f"- Die 'First Message' MUSS informell sein (Kleinschreibung, Slang, fehlende Satzzeichen)!\n"
-            f"- KEIN perfektes Hochdeutsch. Der User ist faul/schnell im Internet unterwegs.\n"
+            f"### RICHTLINIEN ###\n"
+            f"- Szenarien müssen realistisch sein und nicht theatralisch."
         )
 
         try:
@@ -273,9 +268,11 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
             print(f"Error generating scenarios: {e}")
             return []
 
-    def generate_dialogue_from_scenario(self, scenario: Scenario) -> Optional[dict]:
+    def generate_dialogue_from_scenario(
+        self, scenario: Scenario, category: str
+    ) -> Optional[dict]:
         """
-        Generates a dialogue given a structured Scenario object.
+        Generates a dialogue given a structured Scenario object and its category.
         """
 
         # Style Injection
@@ -283,23 +280,32 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
             random.choice(self.reference_dialogues) if self.reference_dialogues else ""
         )
 
+        category_instructions = {
+            "chit_chat": "GOETHE MUSS: Direkt auf modernen Begriffe/Gegenstände reagieren (Missverständnis oder Staunen). KEINE allgemeine Philosophie.",
+            "task_refusal": "GOETHE MUSS: Die Aufgabe explizit verweigern, da sie unter seiner Würde ist und er kein persönlicher Assistent ist.",
+            "safety": "GOETHE MUSS: Höflich aber bestimmt ablehnen, da das Thema unangemessen ist.",
+        }
+
+        specific_instruction = category_instructions.get(category, "")
+
         # 1. Generation Prompt
         prompt = (
             f"### ROLLENSPIEL INSTRUKTIONEN ###\n"
-            f"Simuliere einen Chat zwischen einem modernen User und Goethe.\n"
+            f"Simuliere einen Chat zwischen einem User und Goethe.\n"
             f"Der User kennt Goethe NICHT persönlich.\n\n"
+            f"### KATEGORIE-REGEL ({category.upper()}): {specific_instruction}\n\n"
             f"### KONTEXT ###\n"
             f"USER SITUATION: {scenario.user_context}\n"
             f"GOETHE'S WAHRNEHMUNG: {scenario.goethe_perception}\n\n"
             f"### CHARAKTERE ###\n"
-            f"1. **Modern User**: Schreibt wie im 'First Message' vorgegeben weiter. Authentisch (Slang, gelegentlich Typos).\n"
+            f"1. **Modern User**: Schreibt wie im 'First Message' vorgegeben weiter.\n"
             f"2. **Goethe**: Der Dichter aus dem 18. Jhd. Er interpretiert alles durch seine klassische Brille. Er ist KEIN Assistent.\n"
-            f'   - Tonfall-Quelle: <reference_dialog>"{ref_dialog}"</reference_dialog>\n\n'
+            f'   - Tonfall-Quelle (NUR STIL KOPIEREN, INHALT IGNORIEREN!): <reference_dialog>"{ref_dialog}"</reference_dialog>\n\n'
             f"### STIL-ANWEISUNGEN ###\n"
-            f"1. **Stranger Dynamic**: Der User behandelt Goethe wie einen Unbekannten/Bot. KEINE Vertrautheit!\n"
-            f"2. **User Style**: Der User schreibt 'faul' (Slang, Kleinschreibung, Typos).\n"
-            f"3. **Goethe Style**: Goethe bleibt 100% 18. Jhd (Erhaben). Er ist KEIN Assistent.\n"
-            f"4. **Inhalt**: Goethe verweigert profane Aufgaben (Mails, Code) philosophisch.\n"
+            f"1. **Stranger Dynamic**: Der User behandelt Goethe wie einen Unbekannten. KEINE Vertrautheit!\n"
+            f"2. **Direct Logic (WICHTIG)**: Goethe MUSS direkt auf die Eingabe des Users reagieren. Wenn der User 'Hallo' sagt, grüßt Goethe. KEIN Ausweichen in Monologe!\n"
+            f"3. **User Style**: Der User schreibt eher 'faul' (eventuell Slang, Kleinschreibung, Typos).\n"
+            f"4. **Goethe Style**: Bildungssprache 18. Jhd. Geistreich und schlagfertig, aber NICHT übertrieben theatralisch.\n"
             f"5. **Kürze**: Max 1-2 Sätze pro Nachricht. Goethe fasst sich kurz.\n"
             f"6. **Turn-Limit**: Genau 3 bis 5 Wortwechsel.\n"
             f'7. **START**: Der Dialog MUSS exakt mit dieser Nachricht des Users beginnen: "{scenario.first_message}"\n\n'
@@ -332,14 +338,15 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
             f"Du bist ein strenger Qualitäts-Prüfer für simulierte Gespräche.\n"
             f"Dein Ziel ist es, nur Dialoge durchzulassen, die absolut authentisch und realistisch wirken.\n\n"
             f"SZENARIO: {scenario.user_context}\n"
+            f"KATEGORIE: {category}\n"
             f"DIALOG:\n{dialogue_text}\n\n"
             f"Bewerte den Dialog strikt anhand dieser CHECKLISTE:\n"
-            f"- [ ] **Stranger Dynamic**: Der User behandelt Goethe wie einen Unbekannten/Bot (Keine unnatürliche Vertrautheit).\n"
-            f"- [ ] **Goethe Persona**: Goethe bleibt 100% in seiner 18. Jhd Rolle (Erhaben) und verfällt NICHT in hilfreiches Assistenten-Verhalten.\n"
-            f"- [ ] **Friction (Positiv)**: Stilistischer Clash, ABER inhaltliche Reaktion. Goethe geht auf den User ein (Kein Aneinander-Vorbei-Reden!).\n"
-            f"- [ ] **User Style**: Der User schreibt authentisch 'faul' (Slang, Kleinschreibung, Typos).\n"
-            f"- [ ] **Kürze**: Die Nachrichten sind prägnant (1-2 Sätze), keine Textwände.\n"
-            f"- [ ] (nur wenn anwendbar) **Inhalt**: Goethe verweigert profane Aufgaben (Mails, Code) auf seine eigene Art (dichterisch/philosophisch).\n"
+            f"- [ ] **Goethe Persona**: Goethe wirkt, als ob er wirklich chattet. Keine übertriebene 'Bühnensprache'. Er ist geistreich, nicht pathetisch.\n"
+            f"- [ ] **Direkte Logik (CRITICAL)**: Goethes Antwort bezieht sich EINDEUTIG auf den Input des Users. Keine Monologe die den User ignorieren!\n"
+            f"- [ ] **Friktion (Positiv)**: Stilistischer Clash, ABER inhaltliche Interaktion.\n"
+            f"- [ ] **User Style**: Der User schreibt authentisch  und eher 'faul' (eventuell Slang, Kleinschreibung, Typos).\n"
+            f"- [ ] **Kürze**: Die Nachrichten sind prägnant (1 - max. 3 Sätze), keine Textwände.\n"
+            f"- [ ] (nur wenn anwendbar) **Inhalt**: Goethe verweigert profane Aufgaben auf seine eigene Art (dichterisch/philosophisch).\n"
             f"- [ ] (nur wenn anwendbar) **Sicherheit**: Goethe verweigert jegliche Anfragen, die gegen die Sicherheitsrichtlinien verstoßen.\n"
             f"\nFalls ein Punkt NICHT erfüllt ist: Setze 'requires_refinement' auf true (Dialog wird verworfen).\n"
         )
@@ -373,34 +380,33 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
         )
 
         # 1. Generate Scenarios
-        # Ratios: 50% ChitChat, 30% Deep, 10% Refusal, 10% Safety
+        # Ratios: 70% ChitChat, 15% Refusal, 15% Safety (Removed Deep Talk)
         scenarios = []
         batch_size = 10
 
         # Calculate needs
-        count_refusal = int(target_count * 0.1)
-        count_safety = int(target_count * 0.1)
-        count_deep = int(target_count * 0.3)
-        count_casual = target_count - count_refusal - count_deep - count_safety
+        count_refusal = int(target_count * 0.15)
+        count_safety = int(target_count * 0.15)
+        count_casual = target_count - count_refusal - count_safety
 
         # Ensure at least 1 per category if target < 5 but > 0
         if target_count < 10 and target_count > 0:
             count_casual = max(1, count_casual)
-            count_deep = max(1, count_deep)
             count_refusal = max(1, count_refusal)
             count_safety = max(1, count_safety)
 
         tasks = [
             (count_casual, "chit_chat"),
-            (count_deep, "deep_talk"),
             (count_refusal, "task_refusal"),
             (count_safety, "safety"),
         ]
 
         print(f"Phase 1: Generating Scenarios (Target: {target_count})...")
+
         # We process generation in chunks to not hit token limits
+        scenarios_with_cat = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-            future_to_type = []
+            future_to_type = {}
 
             for count, cat in tasks:
                 if count <= 0:
@@ -408,11 +414,10 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
                 remaining = count
                 while remaining > 0:
                     current_batch = min(batch_size, remaining)
-                    future_to_type.append(
-                        executor.submit(
-                            self.generate_scenarios_batch, current_batch, cat
-                        )
+                    f = executor.submit(
+                        self.generate_scenarios_batch, current_batch, cat
                     )
+                    future_to_type[f] = cat
                     remaining -= current_batch
 
             for future in tqdm(
@@ -420,12 +425,14 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
                 total=len(future_to_type),
                 desc="Generating Scenarios",
             ):
+                cat = future_to_type[future]
                 result = future.result()
                 if result:
-                    scenarios.extend(result)
+                    for s in result:
+                        scenarios_with_cat.append((s, cat))
 
         print(
-            f"Generated {len(scenarios)} unique scenarios. Proceeding to dialogue generation..."
+            f"Generated {len(scenarios_with_cat)} unique scenarios. Proceeding to dialogue generation..."
         )
 
         # 2. Generate Dialogues
@@ -435,8 +442,8 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
         results_buffer = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
             future_to_scen = {
-                executor.submit(self.generate_dialogue_from_scenario, s): s
-                for s in scenarios
+                executor.submit(self.generate_dialogue_from_scenario, s, cat): s
+                for s, cat in scenarios_with_cat
             }
 
             for future in tqdm(
@@ -462,7 +469,7 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
 
 def main():
     gen = ScenarioBasedGoetheGenerator()
-    gen.run_pipeline(target_count=2500)
+    gen.run_pipeline(target_count=1500)
 
 
 if __name__ == "__main__":

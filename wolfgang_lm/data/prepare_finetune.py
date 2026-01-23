@@ -117,6 +117,9 @@ def main():
 
     print(f"Split: {len(train_samples)} Train, {len(val_samples)} Validation")
 
+    total_train_tokens = sum(len(s["input_ids"]) for s in train_samples)
+    print(f"Total tokens in train set: {total_train_tokens}")
+
     # Lookup Padding Token
     pad_id = tokenizer.token_to_id("<|padding|>")
     if pad_id is None:

@@ -306,9 +306,9 @@ if __name__ == "__main__":
 
     # Reduce LR for fine-tuning
     train_config.learning_rate = (
-        2e-5  # Lower than pretrain min_lr (6e-5) to avoid shock
+        6e-5  # Lower than pretrain min_lr (6e-5) to avoid shock
     )
-    train_config.min_lr = 2e-6
+    train_config.min_lr = 6e-6
 
     # Preventing Overfitting:
     # Dataset is ~5000 samples.
