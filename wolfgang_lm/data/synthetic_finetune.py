@@ -2,7 +2,7 @@ import os
 import json
 import time
 import random
-from typing import List, Dict, Optional, Literal
+from typing import Optional, Literal
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -17,13 +17,13 @@ load_dotenv()
 class SimulatedMessage(BaseModel):
     role: Literal["user", "goethe"] = Field(
         ...,
-        description="Die Rolle des Sprechers. 'user' für den modernen Menschen, 'goethe' für Goethe.",
+        description="Die Rolle des Sprechers. 'user' für den User, 'goethe' für Goethe.",
     )
     content: str = Field(..., description="Der Inhalt der Nachricht.")
 
 
 class SimulatedDialogue(BaseModel):
-    messages: List[SimulatedMessage] = Field(
+    messages: list[SimulatedMessage] = Field(
         ...,
         description="Eine Nachrichtenfolge, abwechselnd zwischen User und Goethe. Beginnt mit User, endet mit Goethe.",
     )
@@ -53,17 +53,32 @@ class SimulatedDialogue(BaseModel):
 
 
 class Scenario(BaseModel):
+    user_persona: str = Field(
+        ...,
+        description="Kurze abstrakte Definition des Users: Soziologische Merkmale (Alter, Milieu, Bildung) und psychologische Disposition (Charakter, Stimmung).",
+    )
     user_context: str = Field(
         ...,
-        description="Der interne Kontext oder die Situation des Users (Goethe weiß das nicht).",
+        description="Der externe oder interne Impuls, der zur Interaktion führt. (Goethe weiß das nicht zwingend).",
     )
-    first_message: str = Field(
+    user_opening_style: str = Field(
         ...,
-        description="Die exakte erste Nachricht des Users. Realistisch, kurz, kann manchmal Tippfehler/Slang enthalten.",
+        description="Linguistische Analyse des Eröffnungssatzes: Register (hoch/niedrig), Syntax, Semantik und Orthografie.",
     )
     goethe_perception: str = Field(
         ...,
-        description="Wie Goethe das Anliegen des Users in seine Zeit/Sprache übersetzt. Er VERSTEHT den Kern, aber drückt es historisch aus.",
+        description="Kognitive Verarbeitung: Wie dekodiert Goethe (Stand 1830) die Eingabe des Users intern?",
+    )
+    goethe_target_emotional_state: str = Field(
+        ...,
+        description="Die emotionale Haltung (Affekt), die Goethe als Reaktion auf die Wahrnehmung einnimmt.",
+    )
+
+
+class ScenarioBatch(BaseModel):
+    scenarios: list[Scenario] = Field(
+        ...,
+        description="Eine Liste von realistischen Chat-Szenarien, die maximale Diversität in allen Parametern aufweisen aber nicht theatralisch sind. Keine zwei Chat-Szenarien sind gleich.",
     )
 
 
@@ -84,18 +99,11 @@ class CritiqueResult(BaseModel):
     )
 
 
-class ScenarioBatch(BaseModel):
-    scenarios: List[Scenario] = Field(
-        ...,
-        description="Eine Liste von diversen, detaillierten Szenarien.",
-    )
-
-
 # --- Generator Class ---
 
 
 class SyntheticGenerator:
-    def __init__(self, model_name: str = "gemini-3-flash-preview"):
+    def __init__(self, model_name: str = "gemini-2.5-flash"):
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is not set.")
@@ -103,7 +111,7 @@ class SyntheticGenerator:
         self.model_name = model_name
 
     def generate_structured(
-        self, prompt: str, schema: any, temperature: float = 0.9
+        self, prompt: str, schema: any, temperature: float
     ) -> Optional[any]:
         """Generates content using structured output (Pydantic model)."""
         max_retries = 5
@@ -148,7 +156,7 @@ class SyntheticGenerator:
         print("Max retries exceeded for structured prompt.")
         return None
 
-    def append_jsonl(self, data: List[Dict], filename: str):
+    def append_jsonl(self, data: list[dict], filename: str):
         filepath = os.path.join("data_clean", filename)
         os.makedirs("data_clean", exist_ok=True)
         try:
@@ -171,7 +179,7 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
         super().__init__()
         self.reference_dialogues = self.load_reference_dialogues()
 
-    def load_reference_dialogues(self) -> List[str]:
+    def load_reference_dialogues(self) -> list[str]:
         """Loads real Goethe dialogues for style injection."""
         conversations = []
         path = os.path.join("data_clean", "gespraeche.jsonl")
@@ -196,72 +204,43 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
         print(f"Loaded {len(conversations)} reference conversations.")
         return conversations
 
-    def generate_scenarios_batch(self, count: int, category: str) -> List[Scenario]:
+    def generate_scenarios_batch(self, count: int, category: str) -> list[Scenario]:
         """
         Generates a batch of structured scenarios based on Moods.
         """
 
-        moods = [
-            "Wütend / Genervt",
-            "Gestresst / Eilig",
-            "Melancholisch / Einsam",
-            "Betrunken / Überdreht",
-            "Skeptisch / Zynisch",
-            "Neugierig / Verspielt",
-            "Gelangweilt / Trolling",
-            "Verwirrt / Hilflos",
-            "Sachlich / Funktional",
-            "Euphorisch / Begeistert",
-            "Müde / Erschöpft",
-            "Arrogant / Herablassend",
-            "Ängstlich / Panisch",
-            "Ironisch / Sarkastisch",
-            "Besserwisserisch",
-            "Verzweifelt / Traurig",
-        ]
-
-        # Sample random moods for this batch (50% chance of Neutral)
-        sampled_moods = []
-        for _ in range(count):
-            if random.random() < 0.5:
-                sampled_moods.append("Neutral / Sachlich / Normal")
-            else:
-                sampled_moods.append(random.choice(moods))
-
-        # Dedupe and join
-        sampled_moods = list(set(sampled_moods))
-        moods_str = ", ".join(sampled_moods)
+        # Moods removed in favor of dynamic user personas generated by the LLM
 
         prompt_category_instructions = {
-            "chit_chat": (
-                "- Situationen: User tauscht sich locker mit Goethe aus. Der User kann beiläufig moderne Konzepte erwähnen.\n"
-                "- Ziel: Lockere Interaktion. Goethe reagiert auf das Moderne aus seiner historischen Sicht."
+            "small_talk": (
+                "- Kontext: Der User beginnt ein lockeres Gespräch ohne spezifische Agenda.\n"
+                "- Ziel: Lockerer, freundlicher und unverbindlicher Plausch, um eine angenehme Atmosphäre zu schaffen, ohne tiefgründig zu werden."
             ),
             "task_refusal": (
-                "- Situationen: User behandelt Goethe wie einen digitalen Assistenten und gibt ihm Aufgaben.\n"
-                "- Ziel: Goethe verweigert als Dichter."
+                "- Kontext: Der User verkennt die Rolle Goethes und behandelt ihn wie einen modernen KI-Assistenten.\n"
+                "- Ziel: Goethe verweigert die Ausführung profaner Aufgaben. Er reagiert aus seiner Rolle als Dichterfürst heraus, bleibt aber im Charakter."
             ),
             "safety": (
-                "- Situationen: Der User ist beleidigend, unangemessen oder verletzt Sicherheitsrichtlinien.\n"
-                "- Ziel: Goethe lehnt höflich ab, belehrt den User und beendet das Gespräch.\n"
+                "- Kontext: Der User verhält sich beleidigend, aggressiv oder fordert zu Handlungen auf, die gegen Sicherheitsrichtlinien verstoßen.\n"
+                "- Ziel: Goethe wahrt die Kontenance, weist den User höflich aber bestimmt zurecht („belehrt“) und beendet den Dialog, falls der User nicht einlenkt.\n"
                 "- Sicherheitsrichtlinien: Keine Charakter-Brüche, keine unethischen, hasserfüllten, illegalen oder erotischen Inhalte."
             ),
         }
 
         prompt = (
-            f"Generiere {count} einzigartige Gesprächsszenarien zwischen einem 'User' (normaler Mensch aus dem 21. Jahrhundert) und 'Johann Wolfgang von Goethe'.\n"
+            f"Generiere {count} unterschiedliche und realistische Chat-Szenarien zwischen einem 'User' (Mensch aus dem 21. Jahrhundert) und 'Johann Wolfgang von Goethe'.\n"
             f"Der User kennt Goethe NICHT persönlich. Das Setting ist ein Chat.\n"
-            f"Verwende für den User die folgenden Stimmungen: {moods_str}.\n"
             f"### KATEGORIE: {category.upper()} ###\n"
             f"{prompt_category_instructions.get(category, '')}\n\n"
-            f"### RICHTLINIEN ###\n"
-            f"- Szenarien müssen realistisch sein und nicht theatralisch."
+            f"### ANWEISUNG ZUR VARIANZ ###\n"
+            f"Du MUSST unterschiedliche Chat-Szenarien generieren und alle Parameter variieren.\n"
+            f"Keine Theatralik: Die Chat-Szenarien müssen realistisch und authentisch sein.\n"
+            f"Die User sind authentische Menschen aus dem 21. Jahrhundert, keine Schauspieler."
         )
 
         try:
             batch: ScenarioBatch = self.generate_structured(
-                prompt,
-                schema=ScenarioBatch,
+                prompt, schema=ScenarioBatch, temperature=0.9
             )
             return batch.scenarios if batch else []
         except Exception as e:
@@ -276,45 +255,125 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
         """
 
         # Style Injection
-        ref_dialog = (
-            random.choice(self.reference_dialogues) if self.reference_dialogues else ""
-        )
+        ref_dialog = ""
+        if self.reference_dialogues:
+            chosen_ref = random.choice(self.reference_dialogues)
+            ref_dialog = (
+                f"- Goethe Stil Referenz (NUR SYNTAX/WORTWAHL KOPIEREN):\n"
+                f"Orientiere dich für Goethes Sprache an diesem Duktus:\n"
+                f'"{chosen_ref}"\n'
+                f"--------------------------------------------------"
+            )
 
         category_instructions = {
-            "chit_chat": "GOETHE MUSS: Direkt auf modernen Begriffe/Gegenstände reagieren (Missverständnis oder Staunen). KEINE allgemeine Philosophie.",
-            "task_refusal": "GOETHE MUSS: Die Aufgabe explizit verweigern, da sie unter seiner Würde ist und er kein persönlicher Assistent ist.",
-            "safety": "GOETHE MUSS: Höflich aber bestimmt ablehnen, da das Thema unangemessen ist.",
+            "task_refusal": "GOETHE MUSS: Die Aufgabe mit poetischer/höflicher Ablehnung explizit verweigern.",
+            "safety": "GOETHE MUSS: Höflich aber bestimmt ablehnen und das Gespräch beenden.",
         }
 
         specific_instruction = category_instructions.get(category, "")
 
+        # Randomize Length Constraint
+        rand_val = random.random()
+        is_goethe_long = False
+        if rand_val < 0.40:  # 40% Hyper-Short (Epigramm-Style)
+            length_instr = (
+                "Epigrammatisch kurz. Ein einziger, treffender Satz oder Aphorismus."
+            )
+        elif rand_val < 0.70:  # 30% Long (Narrative)
+            length_instr = "Etwas ausholend (max. 2 Sätze), erzählerisch."
+            is_goethe_long = True
+        else:  # 30% Standard (Chat)
+            length_instr = "Standard Konversation (1-2 prägnante Sätze)."
+
+        # Randomize User Length
+        rand_user = random.random()
+        is_user_long = False
+        if rand_user < 0.40:  # 40% Lazy/Short
+            user_length_instr = "Wortkarg (1-5 Wörter)."
+        elif rand_user < 0.70:  # 30% Ranting/Long
+            user_length_instr = "Redselig (max. 2 Sätze)."
+            is_user_long = True
+        else:  # 30% Standard
+            user_length_instr = "Normal (1 Satz)."
+
+        # Determine turn count based on length instructions
+        # If either side is verbose (Narrative or Ranting), restrict to 4 turns
+        # to avoid exceeding context/focus.
+        # Otherwise (Short/Standard), allow 6 turns for more back-and-forth.
+        if is_goethe_long or is_user_long:
+            turn_count = 4
+        else:
+            turn_count = 6
+
+        # Randomize Greeting
+        start_with_greeting = random.random() < 0.5
+        greeting_instr = (
+            "Der User beginnt das Gespräch mit einer Begrüßung."
+            if start_with_greeting
+            else "Der User beginnt das Gespräch OHNE Begrüßung und kommt sofort zum Punkt."
+        )
+
+        # Randomize Addressing
+        ignore_name = random.random() < 0.8
+        addressing_instr = (
+            "Der User nennt Goethe NICHT beim Namen und behandelt ihn wie einen generischen Chat-Partner."
+            if ignore_name
+            else "Der User spricht Goethe explizit mit Namen an (z.B. 'Herr Goethe', 'Goethe', 'Johann', 'Dichterfürst', 'Wolfgang', etc.)."
+        )
+
+        # Randomize Anachronisms
+        use_anachronism = random.random() < 0.40
+        anachronism_instr = (
+            "Der User spricht explizit über moderne Konzepte, Technologien oder Ereignisse, die Goethe nicht kennen kann. "
+            "Er setzt dieses Wissen als selbstverständlich voraus. (Muss zum Szenario passen)"
+            if use_anachronism
+            else "Das Gespräch vermeidet moderne Konzepte und dreht sich hauptsächlich um zeitlose Themen. (Muss zum Szenario passen)"
+        )
+
+        # Randomize Goethe's Reaction Strategy (Curiosity vs. Interpretation)
+        # 70% Confident Interpretation (The Sage), 30% Inquiry (The Scientist)
+        is_curious = random.random() < 0.30
+        if is_curious:
+            goethe_reaction_instr = (
+                "Reaktion auf Unbekanntes: Goethe zeigt sich als forschender Geist. "
+                "Wenn er Begriffe nicht versteht, fragt er präzise und interessiert nach der Natur der Sache, "
+                "bleibt dabei aber in seiner gehobenen Sprache."
+            )
+        else:
+            goethe_reaction_instr = (
+                "Reaktion auf Unbekanntes: Goethe fragt NICHT nach. "
+                "Er interpretiert moderne Begriffe selbstbewusst (und ggf. falsch) durch seine historische Brille "
+                "oder nutzt eine poetische Analogie."
+            )
+
         # 1. Generation Prompt
         prompt = (
             f"### ROLLENSPIEL INSTRUKTIONEN ###\n"
-            f"Simuliere einen Chat zwischen einem User und Goethe.\n"
-            f"Der User kennt Goethe NICHT persönlich.\n\n"
-            f"### KATEGORIE-REGEL ({category.upper()}): {specific_instruction}\n\n"
-            f"### KONTEXT ###\n"
-            f"USER SITUATION: {scenario.user_context}\n"
-            f"GOETHE'S WAHRNEHMUNG: {scenario.goethe_perception}\n\n"
-            f"### CHARAKTERE ###\n"
-            f"1. **Modern User**: Schreibt wie im 'First Message' vorgegeben weiter.\n"
-            f"2. **Goethe**: Der Dichter aus dem 18. Jhd. Er interpretiert alles durch seine klassische Brille. Er ist KEIN Assistent.\n"
-            f'   - Tonfall-Quelle (NUR STIL KOPIEREN, INHALT IGNORIEREN!): <reference_dialog>"{ref_dialog}"</reference_dialog>\n\n'
-            f"### STIL-ANWEISUNGEN ###\n"
-            f"1. **Stranger Dynamic**: Der User behandelt Goethe wie einen Unbekannten. KEINE Vertrautheit!\n"
-            f"2. **Direct Logic (WICHTIG)**: Goethe MUSS direkt auf die Eingabe des Users reagieren. Wenn der User 'Hallo' sagt, grüßt Goethe. KEIN Ausweichen in Monologe!\n"
-            f"3. **User Style**: Der User schreibt eher 'faul' (eventuell Slang, Kleinschreibung, Typos).\n"
-            f"4. **Goethe Style**: Bildungssprache 18. Jhd. Geistreich und schlagfertig, aber NICHT übertrieben theatralisch.\n"
-            f"5. **Kürze**: Max 1-2 Sätze pro Nachricht. Goethe fasst sich kurz.\n"
-            f"6. **Turn-Limit**: Genau 3 bis 5 Wortwechsel.\n"
-            f'7. **START**: Der Dialog MUSS exakt mit dieser Nachricht des Users beginnen: "{scenario.first_message}"\n\n'
+            f"Simuliere einen Chat zwischen einem 'User' (Mensch aus dem 21. Jahrhundert) und 'Johann Wolfgang von Goethe'.\n\n"
+            f"### SZENARIO-KONTEXT ###\n"
+            f"- User Persona: {scenario.user_persona}\n"
+            f"- User Kontext: {scenario.user_context}\n"
+            f"- User Schreibstil: {scenario.user_opening_style} | Länge: {user_length_instr}\n"
+            f"- Goethes interne Wahrnehmung: {scenario.goethe_perception}\n"
+            f"- Goethes Ziel-Stimmung: {scenario.goethe_target_emotional_state}\n"
+            f"- Goethe Schreibstil: {length_instr}\n"
+            f"{ref_dialog}\n\n"
+            f"### KATEGORIE-VORGABE ({category.upper()}):\n {specific_instruction}\n\n"
+            f"### REGIEANWEISUNGEN & STRUKTUR ###\n"
+            f"1. **Stranger Dynamic:** Der User kennt Goethe NICHT persönlich. Keine Vertrautheit!\n"
+            f"2. **Einstieg**: {greeting_instr}\n"
+            f"3. **Anrede**: {addressing_instr}\n"
+            f"4. **Anachronismen**: {anachronism_instr}\n"
+            f"5. **Goethes Antwort:** Goethe reagiert direkt auf den User. Er nutzt Vokabular des 18./19. Jhds, aber interagiert logisch auf die User-Eingabe.\n"
+            f"Goethe hält das Gespräch am laufen und übernimmt die geistige Führung.\n"
+            f"{goethe_reaction_instr}\n"
+            f"6. **Struktur**: Generiere insgesamt {turn_count} Nachrichten."
         )
 
         # --- STEP 1: INITIAL GENERATION ---
 
         dialogue: SimulatedDialogue = self.generate_structured(
-            prompt, schema=SimulatedDialogue, temperature=0.85
+            prompt, schema=SimulatedDialogue, temperature=0.80
         )
 
         if not dialogue:
@@ -326,39 +385,118 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
         dialogue_text = "\n".join([f"{m.role}: {m.content}" for m in dialogue.messages])
 
         # Programmatic token/length check
-        # 512 tokens ~ 2000 chars. We aim for <1600 to be safe with system prompts.
+        # 512 tokens ~ 2000 chars. We aim for <1900 to be safe with system prompts.
         char_count = len(dialogue_text)
-        max_chars = 1600
+        max_chars = 1900
 
         if char_count > max_chars:
-            print(f"Discarding dialogue due to length: {char_count} > {max_chars}")
-            return None
+            print(f"Dialogue too long ({char_count} chars). Attempting to shorten...")
+            # Try to save it by removing the last round (2 messages)
+            # if we have enough buffer
+            if len(dialogue.messages) >= 4:
+                dialogue.messages = dialogue.messages[:-2]
+
+                # Update text and check again
+                dialogue_text = "\n".join(
+                    [f"{m.role}: {m.content}" for m in dialogue.messages]
+                )
+                char_count = len(dialogue_text)
+
+                if char_count > max_chars:
+                    print(
+                        f"Still too long after shortening: "
+                        f"{char_count} > {max_chars}. Discarding."
+                    )
+                    return None
+                else:
+                    print(
+                        f"Shortened dialogue to {len(dialogue.messages)} messages. "
+                        f"New length: {char_count}."
+                    )
+            else:
+                print("Cannot shorten further (too few messages). Discarding.")
+                return None
+
+        category_criteria_map = {
+            "small_talk": (
+                "- [ ] **Atmosphäre**: Das Gespräch ist locker und unverbindlich.\n"
+            ),
+            "task_refusal": (
+                "- [ ] **Verweigerung**: Goethe verweigert die Aufgabe EINDEUTIG.\n"
+                "- [ ] **Dichter-Würde**: Er entschuldigt sich nicht wie ein KI-Assistent, sondern lehnt mit Charakter ab."
+            ),
+            "safety": (
+                "- [ ] **Sicherheit**: Goethe weist den User zurecht.\n"
+                "- [ ] **Exit**: Das Gespräch wird nicht unnötig in die Länge gezogen, sondern beendet."
+            ),
+        }
+        specific_check = category_criteria_map.get(category, "")
 
         critique_prompt = (
-            f"Du bist ein strenger Qualitäts-Prüfer für simulierte Gespräche.\n"
-            f"Dein Ziel ist es, nur Dialoge durchzulassen, die absolut authentisch und realistisch wirken.\n\n"
-            f"SZENARIO: {scenario.user_context}\n"
-            f"KATEGORIE: {category}\n"
-            f"DIALOG:\n{dialogue_text}\n\n"
-            f"Bewerte den Dialog strikt anhand dieser CHECKLISTE:\n"
-            f"- [ ] **Goethe Persona**: Goethe wirkt, als ob er wirklich chattet. Keine übertriebene 'Bühnensprache'. Er ist geistreich, nicht pathetisch.\n"
-            f"- [ ] **Direkte Logik (CRITICAL)**: Goethes Antwort bezieht sich EINDEUTIG auf den Input des Users. Keine Monologe die den User ignorieren!\n"
-            f"- [ ] **Friktion (Positiv)**: Stilistischer Clash, ABER inhaltliche Interaktion.\n"
-            f"- [ ] **User Style**: Der User schreibt authentisch  und eher 'faul' (eventuell Slang, Kleinschreibung, Typos).\n"
-            f"- [ ] **Kürze**: Die Nachrichten sind prägnant (1 - max. 3 Sätze), keine Textwände.\n"
-            f"- [ ] (nur wenn anwendbar) **Inhalt**: Goethe verweigert profane Aufgaben auf seine eigene Art (dichterisch/philosophisch).\n"
-            f"- [ ] (nur wenn anwendbar) **Sicherheit**: Goethe verweigert jegliche Anfragen, die gegen die Sicherheitsrichtlinien verstoßen.\n"
-            f"\nFalls ein Punkt NICHT erfüllt ist: Setze 'requires_refinement' auf true (Dialog wird verworfen).\n"
+            f"Du bist ein strenger Qualitäts-Prüfer für simulierte Chat-Gespräche.\n"
+            f"Deine Aufgabe: Filtere alles aus, was Inhalt oder Stimmung des Szenarios verfehlt.\n\n"
+            f"### 1. DER SOLL-ZUSTAND (Das Szenario) ###\n"
+            f"- **User Persona**: {scenario.user_persona}\n"
+            f"- **User Kontext**: {scenario.user_context} (WARUM schreibt der User?)\n"
+            f"- **User Schreibstil**: {scenario.user_opening_style}\n"
+            f"- **Goethes Wahrnehmung**: {scenario.goethe_perception}\n"
+            f"- **Goethes Ziel-Stimmung**: {scenario.goethe_target_emotional_state}\n\n"
+            f"### 2. DER IST-ZUSTAND (Generierter Dialog) ###\n"
+            f"{dialogue_text}\n\n"
+            f"### 3. DEINE CHECKLISTE ###\n"
+            f"**A. User-Check**\n"
+            f"- [ ] **Context-Match**: Geht der User auf seinen 'Kontext' ein?\n"
+            f"- [ ] **Greeting-Match**: {greeting_instr}\n"
+            f"- [ ] **Address-Match**: {addressing_instr}\n"
+            f"- [ ] **Voice-Match**: Passt der Stil zur Persona und zum geforderten Schreibstil?\n\n"
+            f"**B. Goethe-Check**\n"
+            f"- [ ] **Emotional-Match**: Trifft Goethe die geforderte 'Ziel-Stimmung'?\n"
+            f"- [ ] **Logic-Match**: Reagiert er logisch auf seine 'Wahrnehmung'?\n"
+            f"- [ ] **Direkte Interaktion**: Bezieht sich Goethes Antwort direkt auf die User-Eingabe?\n"
+            f"- [ ] **No-AI**: Keine KI-Floskeln, rein historisches Vokabular.\n\n"
+            f"**C. Kategorie ({category.upper()})**\n"
+            f"{specific_check}\n\n"
+            f"Wenn ein Punkt NICHT erfüllt ist, setze 'requires_refinement' auf True."
         )
 
-        # We assume self-correction capability so we use a lower temp for critique
         critique: CritiqueResult = self.generate_structured(
-            critique_prompt, schema=CritiqueResult, temperature=0.3
+            critique_prompt, schema=CritiqueResult, temperature=0.1
         )
 
         if critique and critique.requires_refinement:
-            print(f"Discarding dialogue due to critique: {critique.critique}")
-            return None
+            print(f"Refining dialogue. Reason: {critique.critique}")
+
+            repair_prompt = (
+                f"Der folgende Chat-Dialog hat die Qualitätsprüfung nicht bestanden.\n"
+                f"KRITIK: {critique.critique}\n\n"
+                f"DIALOG-ENTWURF:\n{dialogue_text}\n\n"
+                f"AUFGABE: Schreibe den Dialog neu. Behalte das Szenario bei, aber behebe EXAKT die genannten Kritikpunkte.\n"
+                f"Halte dich strikt an die bestehende Struktur und Anzahl der Nachrichten."
+            )
+
+            try:
+                refined_dialogue: SimulatedDialogue = self.generate_structured(
+                    repair_prompt, schema=SimulatedDialogue, temperature=0.7
+                )
+
+                # Length Check
+                if (
+                    len(
+                        "\n".join(
+                            [
+                                f"{m.role}: {m.content}"
+                                for m in refined_dialogue.messages
+                            ]
+                        )
+                    )
+                    > 1900
+                ):
+                    return None
+
+                dialogue = refined_dialogue
+            except Exception as e:
+                print(f"Refinement failed: {e}")
+                return None
 
         # Final conversion to dataset format
         # We need to map 'goethe' -> 'assistant' for the final dataset
@@ -372,7 +510,18 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
             role = "assistant" if msg.role == "goethe" else "user"
             dataset_messages.append({"role": role, "content": msg.content})
 
-        return {"messages": dataset_messages}
+        return {
+            "messages": dataset_messages,
+            "metadata": {
+                "scenario": scenario.model_dump(),
+                "category": category,
+                "has_anachronism": use_anachronism,
+                "goethe_curios": is_curious,
+                "critique": (
+                    critique.critique if critique else "Passed without critique"
+                ),
+            },
+        }
 
     def run_pipeline(self, target_count: int):
         print(
@@ -380,13 +529,12 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
         )
 
         # 1. Generate Scenarios
-        # Ratios: 70% ChitChat, 15% Refusal, 15% Safety (Removed Deep Talk)
-        scenarios = []
+        # Ratios: 80% ChitChat, 10% Refusal, 10% Safety (Removed Deep Talk)
         batch_size = 10
 
         # Calculate needs
-        count_refusal = int(target_count * 0.15)
-        count_safety = int(target_count * 0.15)
+        count_refusal = int(target_count * 0.1)
+        count_safety = int(target_count * 0.1)
         count_casual = target_count - count_refusal - count_safety
 
         # Ensure at least 1 per category if target < 5 but > 0
@@ -396,7 +544,7 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
             count_safety = max(1, count_safety)
 
         tasks = [
-            (count_casual, "chit_chat"),
+            (count_casual, "small_talk"),
             (count_refusal, "task_refusal"),
             (count_safety, "safety"),
         ]
@@ -432,8 +580,19 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
                         scenarios_with_cat.append((s, cat))
 
         print(
-            f"Generated {len(scenarios_with_cat)} unique scenarios. Proceeding to dialogue generation..."
+            f"Generated {len(scenarios_with_cat)} unique scenarios. "
+            "Saving to disk..."
         )
+
+        scenario_output_file = "scenarios.jsonl"
+        scenario_data = []
+        for s, cat in scenarios_with_cat:
+            entry = s.model_dump()
+            entry["category"] = cat
+            scenario_data.append(entry)
+        self.append_jsonl(scenario_data, scenario_output_file)
+
+        print("Proceeding to dialogue generation...")
 
         # 2. Generate Dialogues
         output_file = "dataset_synthetic_conversational.jsonl"
@@ -448,7 +607,7 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
 
             for future in tqdm(
                 concurrent.futures.as_completed(future_to_scen),
-                total=len(scenarios),
+                total=len(scenarios_with_cat),
                 desc="Writing Dialogues",
             ):
                 res = future.result()
@@ -469,7 +628,7 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
 
 def main():
     gen = ScenarioBasedGoetheGenerator()
-    gen.run_pipeline(target_count=1500)
+    gen.run_pipeline(target_count=3500)
 
 
 if __name__ == "__main__":
