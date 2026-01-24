@@ -306,20 +306,20 @@ if __name__ == "__main__":
 
     # Reduce LR for fine-tuning
     train_config.learning_rate = (
-        6e-5  # Lower than pretrain min_lr (6e-5) to avoid shock
+        3e-5  # Lower than pretrain min_lr (6e-5) to avoid shock
     )
-    train_config.min_lr = 6e-6
+    train_config.min_lr = 3e-6
 
     # Preventing Overfitting:
-    # Dataset is ~5000 samples.
+    # Dataset is ~3500 samples.
     # Batch Size 8 * Grad Accum 4 = 32 samples/step.
-    # ~155 steps per epoch (5000 / 32).
-    # Target: ~3.0 epochs -> ~500 steps.
+    # ~110 steps per epoch (3500 / 32).
+    # Target: ~5.0 epochs -> ~550 steps.
     train_config.batch_size = 8
     train_config.gradient_accumulation_steps = 4
-    train_config.max_iters = 500
-    train_config.warmup_iters = 50  # Warmup for first ~10%
-    train_config.lr_decay_iters = 500  # Decay down to min_lr by end
+    train_config.max_iters = 600
+    train_config.warmup_iters = 60  # Warmup for first ~10%
+    train_config.lr_decay_iters = 600  # Decay down to min_lr by end
     train_config.eval_interval = 50
     train_config.log_interval = 10
 
