@@ -17,7 +17,7 @@ The extraction is performed using the script `wolfgang_lm/data/extract_dialogue.
 The raw text files are split into large chunks (default `50,000` characters) to fit within the context window of the extraction model. A smart overlapping strategy (default `1,000` characters) is used to ensure conversation threads that cross chunk boundaries are not lost or cut abruptly.
 
 ### 2. LLM-Based Extraction
-We utilize **Google Gemini** (`gemini-3-flash-preview`) to perform the semantic transformation. 
+We utilize **Google Gemini** (`gemini-2.5-flash` / `gemini-3-flash-preview`) to perform the semantic transformation. 
 
 **System Prompt Strategy:**
 The model is instructed to:
@@ -46,8 +46,9 @@ For generating synthetic training data (modern concepts, style bridging), see [S
 The fine-tuning preparation script is designed to **automatically detect and aggregate all `.jsonl` files** found in the `data_clean/` directory.
 
 Current Dataset Components:
-1.  **`gespraeche.jsonl`**: The core historical dialogues extracted from Eckermann.
-2.  **`dataset_synthetic_conversational.jsonl`**: The unified synthetic dataset containing all modern, safety, and creative samples (~1000+ samples).
+1.  **`dataset_synthetic_conversational.jsonl`**: The unified synthetic dataset containing all modern, safety, and creative samples (~3500 samples).
+
+> **Note**: The historical `gespraeche.jsonl` is currently generated for reference/style injection but not directly included in the training set in the current configuration.
 
 ## 5. Verification Report: Dataset Size & Quality
 
@@ -57,7 +58,7 @@ Based on the model architecture (**75M Parameters**) and current research, the d
 The 2023 [LIMA Paper](https://arxiv.org/abs/2305.11206) ("Less Is More for Alignment") demonstrated that for Supervised Fine-Tuning (SFT), the *quantity* of data is far less important than the *quality* and *diversity*.
 
 *   **LIMA Standard:** 1,000 diverse, high-quality prompts were enough to align a 65B model.
-*   **Our Dataset:** **~1,277 samples**.
+*   **Our Dataset:** **~3,500 samples**.
 *   **Conclusion:** We have hit the "LIMA benchmark". Adding significantly more synthetic/filler data would likely degrade performance by diluting the specific "Goethe" signal with generic AI patterns.
 
 ### B. Surface Alignment Mechanics
@@ -67,19 +68,16 @@ Fine-tuning does **not** teach the model new facts/logic (that happened in Pre-t
 
 | Category | Count (Approx.) | Impact | Purpose |
 | :--- | :--- | :--- | :--- |
-| **Historical (Gespräche)** | ~320 | Base (Authenticity) | The ground truth of Goethe's voice. |
-| **Modern Concepts** | ~350 | High (New Vocabulary) | Teaches handling anachronisms (e.g. "Smartphone" -> "Mirror of the world"). |
-| **Style Bridge** | ~340 | High (Tone Shift) | Teaches mapping slang (`"Digga"`) to dignified responses. |
-| **Modern Sage** | ~160 | High (Utility) | Applies Goethe's wisdom to modern life advice. |
-| **Identity/Safety** | ~60 | Critical (Constraints) | Hard boundaries ("I am Goethe, not an AI"). |
-| **Phil/Lit/Misc** | ~55 | Medium (Depth) | Reinforces the intellectual interaction style. |
+| **Small Talk / Functional** | ~2800 | High (Generalization) | Covers modern concepts, everyday chat, and "style bridging" where Goethe encounters slang. |
+| **Task Refusal** | ~350 | High (Character) | Teaches Goethe to refuse being a tool/assistant ("I am a poet, not a servant"). |
+| **Safety** | ~350 | Critical (Constraints) | Handling toxicity or illegal requests with dignity. |
 
-**Assessment:** The distribution is well-balanced. We have matched the historical data (~320) with an equal amount of "Modern Concepts" (~350) and "Style Bridge" (~340) to ensure the model can generalize to non-historical inputs.
+**Assessment:** The dataset is dominated by synthetic interactions (~3500) to enforce the persona in modern contexts (Small Talk, Refusal, Safety).
 
-## 6. Prepare Binary Data (Masking)
-Run the preparation script. It will scan `data_clean/` for all `*.jsonl` files, tokenize them, and create the necessary masking arrays for loss calculation (training only on Assistant responses).
+## 6. Prepare Fine-Tuning Data
+Run the preparation script. It will scan `data_clean/` for the configured `.jsonl` files (currently only synthetic), tokenize them, and create a PyTorch dataset with proper masking (training only on Assistant responses).
 
 ```bash
-python -m wolfgang_lm.data.prepare_finetune
+pixi run python -m wolfgang_lm.data.prepare_finetune
 ```
-*   **Output**: `data_clean/finetune_train.bin`, `data_clean/finetune_val.bin` (+ corresponding masks).
+*   **Output**: `data_clean/finetune_dataset.pt` (Contains `train` and `val` lists with input_ids and labels).
