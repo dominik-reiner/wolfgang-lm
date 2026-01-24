@@ -76,7 +76,13 @@ class WolfgangGenerator:
                 # If score > 0: divide by penalty (shrink towards 0).
                 if repetition_penalty != 1.0:
                     for i in range(logits.shape[0]):
-                        unique_tokens = torch.unique(idx[i])
+                        context_window = 24
+                        cond_idx = (
+                            idx[i, -context_window:]
+                            if idx.size(1) > context_window
+                            else idx[i]
+                        )
+                        unique_tokens = torch.unique(cond_idx)
                         logits[i, unique_tokens] = torch.where(
                             logits[i, unique_tokens] < 0,
                             logits[i, unique_tokens] * repetition_penalty,
@@ -139,10 +145,10 @@ class WolfgangGenerator:
         self,
         prompt,
         max_new_tokens=100,
-        temperature=0.8,
-        top_k=200,
-        top_p=1.0,
-        repetition_penalty=1.2,
+        temperature=0.6,
+        top_k=40,
+        top_p=0.9,
+        repetition_penalty=1.15,
         include_prompt=False,
         stop_tokens=None,
         seed=None,
