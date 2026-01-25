@@ -34,6 +34,8 @@ class ChatCompletionRequest(BaseModel):
     temperature: float = 0.6
     top_p: float = 0.9
     top_k: int = 40
+    repetition_penalty: float = 1.2
+    seed: int = None
     stream: bool = False
 
 
@@ -63,10 +65,6 @@ async def health_check():
 async def chat_completions(req: ChatCompletionRequest):
     print("\n" + "=" * 60)
     print(f"📥 REQUEST RECEIVED at {time.strftime('%H:%M:%S')}")
-    print(
-        f"📊 Config: temp={req.temperature:.2f}, top_p={req.top_p:.2f}, "
-        f"top_k={req.top_k}, max_tokens={req.max_tokens}"
-    )
 
     if not generator:
         print("❌ Error: Model not loaded")
@@ -162,6 +160,8 @@ def stream_generator(prompt, req, stop_tokens):
         temperature=req.temperature,
         top_k=req.top_k,
         top_p=req.top_p,
+        repetition_penalty=req.repetition_penalty,
+        seed=req.seed,
         include_prompt=False,
         stop_tokens=stop_tokens,
         stream=True,

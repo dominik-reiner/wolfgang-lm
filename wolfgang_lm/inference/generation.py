@@ -3,6 +3,7 @@ from collections import deque
 import torch
 import torch.nn.functional as F
 from tokenizers import Tokenizer
+from typing import Optional
 from wolfgang_lm.modeling.transformer import WolfgangGPT
 from wolfgang_lm.modeling.config import ModelConfig
 
@@ -143,17 +144,27 @@ class WolfgangGenerator:
 
     def generate(
         self,
-        prompt,
-        max_new_tokens=100,
-        temperature=0.6,
-        top_k=40,
-        top_p=0.9,
-        repetition_penalty=1.2,
-        include_prompt=False,
-        stop_tokens=None,
-        seed=None,
-        stream=False,
+        prompt: str,
+        max_new_tokens: int = 100,
+        temperature: float = 1.0,
+        top_k: Optional[int] = None,
+        top_p: float = 1.0,
+        repetition_penalty: float = 1.0,
+        include_prompt: bool = False,
+        stream: bool = False,
+        stop_tokens: Optional[list] = None,
+        seed: Optional[int] = None,
     ):
+        print("Generating with the following parameters:")
+        print(f"Max new tokens: {max_new_tokens}")
+        print(f"Temperature: {temperature}")
+        print(f"Top k: {top_k}")
+        print(f"Top p: {top_p}")
+        print(f"Repetition penalty: {repetition_penalty}")
+        print(f"Include prompt: {include_prompt}")
+        print(f"Stream: {stream}")
+        print(f"Stop tokens: {stop_tokens}")
+        print(f"Seed: {seed}")
         # Encode
         ids = self.tokenizer.encode(prompt).ids
         # shape (1, seq_len)
