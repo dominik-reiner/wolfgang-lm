@@ -89,7 +89,6 @@ async function sendMessage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 messages: conversationHistory,
-                max_tokens: 150,
                 stream: stream
             })
         });
