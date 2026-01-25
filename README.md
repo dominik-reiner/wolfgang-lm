@@ -26,6 +26,7 @@ WOLFGANG-LM is a specialized language model trained from scratch to preserve and
     *   **Size**: ~75M Parameters (Optimized for Consumer Inference)
     *   **Features**: RoPE, SwiGLU, RMSNorm, GQA, Weight Tying (See [Architecture Docs](docs/model_architecture.md))
     *   **Context**: 512 Tokens
+    *   **Inference**: Custom sampler with Nucleus & Top-K sampling (See [Inference Docs](docs/inference_generation.md))
 *   **Tokenizer**: Custom Byte-Pair Encoding (BPE)
     *   **Vocabulary**: 32,768 tokens
     *   **Specialization**: Optimized for 17th to 19th-century German (Umlauts, archaic spellings)
@@ -35,35 +36,34 @@ WOLFGANG-LM is a specialized language model trained from scratch to preserve and
 
 *   **Primary Corpus**: Sourced from the **[Deutsches Textarchiv (DTA)](https://www.deutschestextarchiv.de/)** (Berlin-Brandenburg Academy of Sciences and Humanities).
     *   *License*: **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)**
-    *   *Content*: Belletristik, Gebrauchsliteratur, Wissenschaft, and Newspapers (17th-19th Century).
+    *   *Content*: Belletristik (Core & Extension), Gebrauchsliteratur, Wissenschaft, and Newspapers.
 *   **Conversational Data**:
-    *   *Historical*: Johann Peter Eckermann's *Conversations with Goethe* (Public Domain).
-    *   *Synthetic*: Generated conversational pairs using **Google Gemini** to bridge the gap to modern user queries.
+    *   *Historical*: Johann Peter Eckermann's *Conversations with Goethe* (Public Domain). Used for style reference.
+    *   *Synthetic*: ~3,500 scenario-based conversational pairs generated using **Google Gemini 2.5 Flash** to bridge the gap to modern user queries.
 
 ## Workflow
 
 ### 1. Data Preparation
 #### Pre-training (Foundation)
-*   **Setup (Download)**: `python -m wolfgang_lm.data.setup`
-*   **Cleaning**: `python -m wolfgang_lm.data.clean`
-*   **Flatten**: `python -m wolfgang_lm.data.flatten`
-*   **Tokenization**: `python -m wolfgang_lm.data.tokenizer.train_tokenizer`
-*   **Binary Conversion**: `python -m wolfgang_lm.data.prepare`
+*   **Setup (Download)**: `pixi run python -m wolfgang_lm.data.setup`
+*   **Cleaning**: `pixi run python -m wolfgang_lm.data.clean`
+*   **Flatten**: `pixi run python -m wolfgang_lm.data.flatten`
+*   **Tokenization**: `pixi run python -m wolfgang_lm.data.tokenizer.train_tokenizer`
+*   **Binary Conversion**: `pixi run python -m wolfgang_lm.data.prepare`
 
 #### Fine-Tuning (Persona)
-*   **Synthetic Data**: `python -m wolfgang_lm.data.synthetic_finetune` (See [Synthetic Data Docs](docs/synthetic_data.md))
-*   **Split & Merge**: `python -m wolfgang_lm.data.split_long_conversations` (Merges `gespraeche` + `synthetic`)
-*   **Prepare & Mask**: `python -m wolfgang_lm.data.prepare_finetune`
+*   **Synthetic Data**: `pixi run python -m wolfgang_lm.data.synthetic_finetune` (See [Synthetic Data Docs](docs/synthetic_data.md))
+*   **Prepare & Mask**: `pixi run python -m wolfgang_lm.data.prepare_finetune`
 
 ### 2. Training
 Supports CUDA (NVIDIA), MPS (Apple Silicon), and CPU.
 *   **Guide**: [Cloud Training Instructions](docs/cloud_training.md)
 
 #### Pre-training
-*   **Command**: `python -m wolfgang_lm.training.train`
+*   **Command**: `pixi run python -m wolfgang_lm.training.train`
 
 #### Fine-Tuning
-*   **Command**: `python -m wolfgang_lm.training.train_finetune`
+*   **Command**: `pixi run python -m wolfgang_lm.training.train_finetune`
 
 ### 3. Usage (Chat)
 **Backend API (Port 8000)**:
@@ -75,22 +75,9 @@ pixi run server
 **Frontend Client**:
 Open `web/index.html` directly in your browser, or host it separately:
 ```bash
-python -m http.server 8080 --directory web
+python run server
 ```
 Then visit `http://localhost:8080`.
-
-### 4. CLI Inference
-Alternatively, run the sampler directly:
-```bash
-python -m wolfgang_lm.inference
-```
-
-### 5. Exporting Model (Hugging Face / GGUF)
-To convert the model for use with Hugging Face Transformers or `llama.cpp` (GGUF):
-```bash
-python -m wolfgang_lm.inference.export_to_hf --ckpt out-pretrain/ckpt_final.pt --tokenizer data_clean/tokenizer.json --out hf_export
-```
-This creates a directory `hf_export/` containing `config.json`, `pytorch_model.bin`, and tokenizer files.
 
 ## What makes WOLFGANG-LM unique?
 Historical Grounding: The model interprets modern concepts through the lens of 18th to 19th-century German. Instead of "failing" at modern words, it recontextualizes them (e.g., a Smartphone becomes "a magical black mirror for the capturing of distant spirits and voices").

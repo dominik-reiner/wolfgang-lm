@@ -3,25 +3,26 @@
 ## Overview
 This document details the datasets acquired and used for the WOLFGANG-LM project. The data is divided into two primary categories: **Foundation Data** (General Language) and **Persona Data** (Fine-tuning).
 
-## 1. Foundation Dataset (`data/Belletristik`)
+## 1. Foundation Dataset
 *   **Purpose**: Used for the Pre-training phase (Causal Language Modeling).
-*   **Content**: A curated collection of German literature (Belletristik) from the period 1600–1900.
+*   **Content**: A curated collection of historical German texts from the period 1600–1900.
 *   **Source**: **DTA Normalized Corpus (2020-10-23)**. Downloaded directly via `python -m wolfgang_lm.data.setup`.
 *   **Size (Cleaned)**: ~980 MB
 *   **Tokens**: ~254 Million (Raw) -> ~1.01 Billion (Effective Training with 4 Epochs)
 *   **File Count**: 3,566 Text Files
-*   **Sources**:
-    *   **Belletristik (Fiction)**: Goethe, Schiller, etc. (Core & Extension)
-    *   **Wissenschaft (Science)**: Scientific texts from the era.
-    *   **Gebrauchsliteratur (Utilitarian)**: Practical texts and catechisms.
-    *   **Zeitung (Newspapers)**: Periodicals for broader context.
+*   **Directories**:
+    *   `data/Belletristik_Core` (Fiction - Core Selection)
+    *   `data/Belletristik_Ext` (Fiction - Extended Selection)
+    *   `data/Wissenschaft` (Science)
+    *   `data/Gebrauchsliteratur` (Utilitarian)
+    *   `data/Zeitung` (Newspapers)
 *   **Characteristics**:
     *   High-fidelity literary and formal German.
     *   Includes archaic spellings and typography.
     *   Rich in philosophical, poetic, and narrative structures.
 
 ## 2. Persona Dataset (`data/gespraeche`)
-*   **Purpose**: Used for the Fine-tuning phase (Supervised Instruction Tuning).
+*   **Purpose**: Used as a **Style Reference** for synthetic data generation and potential future fine-tuning.
 *   **Content**: Eckermann's "Conversations with Goethe" (*Gespräche mit Goethe*).
 *   **Source**: **DTA Normalized Corpus (2020-10-23)**. Downloaded directly via `python -m wolfgang_lm.data.setup`.
 *   **Files**:
@@ -32,12 +33,12 @@ This document details the datasets acquired and used for the WOLFGANG-LM project
     *   Dialogue-heavy format.
     *   Captures Goethe's conversational voice, opinions, and mannerisms.
     *   Contains distinct "Question/Answer" or "Stimulus/Response" structures suitable for training a chatbot persona.
-    *   **Processing**: See [Fine-Tuning Preparation](fine_tuning_preparation.md) for details on how this narrative text is converted into a dialogue format.
+    *   **Processing**: Narrative text was converted into dialogue format using `wolfgang_lm/data/extract_dialogue.py` (Gemini 3 Flash Preview). See [Fine-Tuning Preparation](fine_tuning_preparation.md) for more details.
 
 ## 3. Synthetic Data (The "Bridge")
 *   **Purpose**: Used to teach the model how to discuss generic modern topics (Internet, AI) using its 19th-century persona.
-*   **Source**: Generated via **Gemini 3 Flash** using the script `wolfgang_lm/data/synthetic_finetune.py`.
-*   **Size**: ~1,200 High-Quality Samples.
+*   **Source**: Generated via **Gemini 2.5 Flash** using the script `wolfgang_lm/data/synthetic_finetune.py`.
+*   **Size**: ~3,500 High-Quality Samples.
 *   **Content**:
     *   **Modern Concepts**: Explaining Blockchain/Space Travel with Goethean metaphors.
     *   **Style Bridge**: Translating slang ("Yo what's up") into dignified text.
@@ -46,5 +47,5 @@ This document details the datasets acquired and used for the WOLFGANG-LM project
     *   **Personal**: Deep biographical knowledge ("Lotte vs Christiane").
 
 ## 4. Data Lineage & Changes
-*   **Original Location**: All files were originally bulk-downloaded into `data/Belletristik`.
+*   **Original Location**: Files were downloaded and split into `data/Belletristik_Core` and `data/Belletristik_Ext` (plus other categories).
 *   **Restructuring**: Identified Eckermann files within `Belletristik` and moved them to a dedicated `data/gespraeche` directory to ensure clean separation between pre-training and fine-tuning data.
