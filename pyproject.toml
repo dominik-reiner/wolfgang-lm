@@ -13,6 +13,7 @@ dependencies = [
     "tokenizers",
     "python-dotenv",
     "setuptools", "pandas>=2.3.3,<3", "matplotlib>=3.10.8,<4",
+    "transformers",
 ]
 
 [tool.setuptools.packages.find]
