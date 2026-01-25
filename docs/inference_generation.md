@@ -21,15 +21,15 @@ generator = WolfgangGenerator(
 
 The `generate` method supports a variety of parameters to control the creativity and coherence of the output:
 
-| Parameter | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `prompt` | `str` | Required | The input text to continue. |
-| `max_new_tokens` | `int` | `100` | Maximum number of tokens to generate. |
-| `temperature` | `float` | `0.6` | Controls randomness. High (1.0+) is chaotic, Low (<0.5) is deterministic. |
-| `top_k` | `int` | `40` | Limits sampling to the top `k` most likely tokens. |
-| `top_p` | `float` | `0.9` | Nucleus Sampling. Cumulative probability threshold. |
-| `repetition_penalty` | `float` | `1.2` | Penalizes tokens that have already appeared in the recent context. |
-| `stop_tokens` | `list[int]` | `None` | List of token IDs that, if generated, stop the generation immediately. |
+| Parameter | Type | Default | Recommended (Goethe) | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `prompt` | `str` | Required | - | The input text to continue. |
+| `max_new_tokens` | `int` | `100` | `200` | Maximum number of tokens to generate. |
+| `temperature` | `float` | `1.0` | `0.05` | Controls randomness. High (1.0+) is chaotic, Low (<0.5) is deterministic. |
+| `top_k` | `int` | `None` | `40` | Limits sampling to the top `k` most likely tokens. |
+| `top_p` | `float` | `1.0` | `0.95` | Nucleus Sampling. Cumulative probability threshold. |
+| `repetition_penalty` | `float` | `1.0` | `1.15` | Penalizes tokens that have already appeared in the recent context. |
+| `stop_tokens` | `list[int]` | `None` | `[UserToken]` | List of token IDs that, if generated, stop the generation immediately. |
 | `seed` | `int` | `None` | Random seed for reproducibility. |
 | `stream` | `bool` | `False` | If True, returns a Python generator yielding text chunks as they are created. |
 

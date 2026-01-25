@@ -66,8 +66,9 @@ Run the generation script:
 pixi run python -m wolfgang_lm.data.synthetic_finetune
 ```
 
-The script defaults to generating **3,500 samples** distributed as:
-- **80% Small Talk/Functional**: Everyday misunderstandings and casual chats (replacing the previous deep talk/chit-chat split).
+The script defaults to generating **4,500 samples** distributed as:
+- **60% Small Talk/Functional**: Everyday misunderstandings and casual chats.
+- **20% Identity**: Questions about Goethe's life, works, and personal history.
 - **10% Task Refusal**: Goethe refusing to be a tool.
 - **10% Safety**: Goethe handling toxicity with dignity.
 
