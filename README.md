@@ -5,6 +5,7 @@ A Historical Tiny Language Model for Goethe-Persona Preservation
 
 ## Table of Contents
 - [Project Vision](#project-vision)
+- [Examples](#examples)
 - [Technical Specifications](#technical-specifications)
 - [Data Sources](#data-sources)
 - [Training Pipeline](#workflow)
@@ -14,6 +15,11 @@ A Historical Tiny Language Model for Goethe-Persona Preservation
 
 ## Project Vision
 WOLFGANG-LM is a specialized language model trained from scratch to preserve and replicate German linguistic patterns from the late 17th to the early 19th centuries. The objective is to manifest a "digital consciousness" of Johann Wolfgang von Goethe. The model is designed to answer modern queries in the authentic style of Weimar Classicism, maintaining historical accuracy, philosophical depth, and the specific tonality of the era.
+
+## Examples
+
+![Dialogue Example 1](dialog_1.png)
+![Dialogue Example 2](dialog_2.png)
 
 ## Technical Specification
 *   **Architecture**: Custom Decoder-Only Transformer (Llama-style)
