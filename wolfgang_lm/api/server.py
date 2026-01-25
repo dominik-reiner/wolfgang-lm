@@ -31,9 +31,9 @@ class Message(BaseModel):
 class ChatCompletionRequest(BaseModel):
     messages: List[Message]
     max_tokens: int = 100
-    temperature: float = 0.5
+    temperature: float = 0.6
     top_p: float = 0.9
-    top_k: int = 200
+    top_k: int = 40
     stream: bool = False
 
 

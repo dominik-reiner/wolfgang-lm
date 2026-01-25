@@ -148,7 +148,7 @@ class WolfgangGenerator:
         temperature=0.6,
         top_k=40,
         top_p=0.9,
-        repetition_penalty=1.15,
+        repetition_penalty=1.2,
         include_prompt=False,
         stop_tokens=None,
         seed=None,
