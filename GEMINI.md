@@ -12,10 +12,12 @@ You MUST adhere to the following rules:
 
 ## 2. THE ENGINEERING FLOW
 *   **Phase 1: Plan**: Before coding, state which files you will touch and why.
-*   **Phase 2: Implement**: Make atomic changes.
+*   **Phase 2: Implement**:
+    *   Make atomic changes.
+    *   **Explain**: Briefly explain what was changed.
 *   **Phase 3: Verify**:
-    *   Syntactic correctness is not enough. Logic must hold.
-    *   If a script is available, run it to verify (e.g., `pixi run ...`).
+    *   **Stop & Propose**: Do **NOT** auto-run verification scripts. Propose the command (e.g., `pixi run ...`) and wait for approval.
+    *   **Iterate**: Allow the user to review and refine the solution before execution.
 *   **Phase 4: Document**:
     *   Code and Documentation are coupled.
     *   If you change CLI args, signatures, or logic, you **MUST** update `README.md` and `docs/*.md`.
@@ -55,9 +57,10 @@ You MUST adhere to the following rules:
     *   **No Magic Values**: Avoid hardcoding parameters, paths, or magic numbers deep in the implementation code.
     *   **Centralization**: Use centralized configuration mechanisms (e.g., config classes/files) to define adjustable parameters.
 
-## 8. TOOL USAGE
-*   **Web Search**:
-    *   **Trigger**: Always use `search_web` to:
-        1.  Verify the correctness of an engineering decision.
-        2.  Get official documentation for a library that is missing from the context.
-    *   **Constraint**: Do not search for basic syntax or generic coding questions.
+## 9. VERIFICATION PROTOCOL (STRICT)
+*   **No Assumptions**: NEVER assume the existence of files, versions, API keys, or specific configurations. Always establish ground truth first.
+*   **Ephemeral Information**: Your training data regarding API models, libraries, features, and external world states is **OUTDATED**.
+    *   **Action**: You MUST use `search_web` to verify **ANY** information that might have changed since your training cutoff (e.g., API endpoints, available models, library versions, current events) before writing code or making decisions.
+*   **Verify First**: Before using a specific value, **VERIFY** it exists or is correct:
+    *   **Local State**: Use `view_file`, `find_by_name`, `run_command` (e.g., check file exists, check installed version).
+    *   **External State**: Use `search_web` (e.g., check latest API docs, available models).
