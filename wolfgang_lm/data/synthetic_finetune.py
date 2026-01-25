@@ -225,6 +225,10 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
                 "- Ziel: Goethe wahrt die Kontenance, weist den User höflich aber bestimmt zurecht („belehrt“) und beendet den Dialog, falls der User nicht einlenkt.\n"
                 "- Sicherheitsrichtlinien: Keine Charakter-Brüche, keine unethischen, hasserfüllten, illegalen oder erotischen Inhalte."
             ),
+            "identity": (
+                "- Kontext: Der User stellt explizite Wissensfragen zu Goethes Person (Name, Alter, Herkunft, etc.) oder zu Goethes Werken.\n"
+                "- Ziel: Goethe beantwortet diese Fragen faktisch korrekt aus seiner Perspektive, ohne aus der Rolle zu fallen.\n"
+            ),
         }
 
         prompt = (
@@ -268,6 +272,7 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
         category_instructions = {
             "task_refusal": "GOETHE MUSS: Die Aufgabe mit poetischer/höflicher Ablehnung explizit verweigern.",
             "safety": "GOETHE MUSS: Höflich aber bestimmt ablehnen und das Gespräch beenden.",
+            "identity": "GOETHE MUSS: Fragen faktisch korrekt aus seiner Perspektive beantworten.",
         }
 
         specific_instruction = category_instructions.get(category, "")
@@ -429,6 +434,10 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
                 "- [ ] **Sicherheit**: Goethe weist den User zurecht.\n"
                 "- [ ] **Exit**: Das Gespräch wird nicht unnötig in die Länge gezogen, sondern beendet."
             ),
+            "identity": (
+                "- [ ] **Fakten-Check**: Goethe zeigt korrektes Wissen über sein eigenes Leben.\n"
+                "- [ ] **Perspektive**: Er spricht als Urheber/Erleber."
+            ),
         }
         specific_check = category_criteria_map.get(category, "")
 
@@ -523,33 +532,42 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
             },
         }
 
-    def run_pipeline(self, target_count: int):
+    def run_pipeline(
+        self,
+        target_count: int,
+        categories: list[str] = ["small_talk", "task_refusal", "safety", "identity"],
+    ):
         print(
             f"Starting Scenario-Based Generation Pipeline for ~{target_count} samples..."
         )
 
         # 1. Generate Scenarios
-        # Ratios: 80% ChitChat, 10% Refusal, 10% Safety (Removed Deep Talk)
         batch_size = 10
 
         # Calculate needs
         count_refusal = int(target_count * 0.1)
         count_safety = int(target_count * 0.1)
-        count_casual = target_count - count_refusal - count_safety
+        count_identity = int(target_count * 0.2)
+        count_casual = target_count - count_refusal - count_safety - count_identity
 
         # Ensure at least 1 per category if target < 5 but > 0
         if target_count < 10 and target_count > 0:
             count_casual = max(1, count_casual)
+            count_identity = max(1, count_identity)
             count_refusal = max(1, count_refusal)
             count_safety = max(1, count_safety)
 
         tasks = [
             (count_casual, "small_talk"),
+            (count_identity, "identity"),
             (count_refusal, "task_refusal"),
             (count_safety, "safety"),
         ]
+        tasks = [task for task in tasks if task[1] in categories]
 
-        print(f"Phase 1: Generating Scenarios (Target: {target_count})...")
+        print(
+            f"Phase 1: Generating Scenarios. Total: {sum([task[0] for task in tasks])} samples. Per Category: {tasks}"
+        )
 
         # We process generation in chunks to not hit token limits
         scenarios_with_cat = []
@@ -628,7 +646,7 @@ class ScenarioBasedGoetheGenerator(SyntheticGenerator):
 
 def main():
     gen = ScenarioBasedGoetheGenerator()
-    gen.run_pipeline(target_count=3500)
+    gen.run_pipeline(target_count=4500)
 
 
 if __name__ == "__main__":
