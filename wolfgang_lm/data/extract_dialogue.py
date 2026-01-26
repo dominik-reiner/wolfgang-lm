@@ -18,7 +18,7 @@ load_dotenv()
 SOURCE_DIR = "data_clean/gespraeche"
 OUTPUT_FILE = "data_clean/gespraeche.jsonl"
 API_KEY = os.getenv("GEMINI_API_KEY")
-MODEL_NAME = "gemini-3-flash-preview"
+MODEL_NAME = "gemini-2.5-flash"
 CHUNK_SIZE = 50000
 
 SYSTEM_PROMPT = """
