@@ -33,18 +33,17 @@ This document details the datasets acquired and used for the WOLFGANG-LM project
     *   Dialogue-heavy format.
     *   Captures Goethe's conversational voice, opinions, and mannerisms.
     *   Contains distinct "Question/Answer" or "Stimulus/Response" structures suitable for training a chatbot persona.
-    *   **Processing**: Narrative text was converted into dialogue format using `wolfgang_lm/data/extract_dialogue.py` (Gemini 3 Flash Preview). See [Fine-Tuning Preparation](fine_tuning_preparation.md) for more details.
+    *   **Processing**: Narrative text was converted into dialogue format using `wolfgang_lm/data/extract_dialogue.py` (Gemini 2.5 Flash Preview). See [Fine-Tuning Preparation](fine_tuning_preparation.md) for more details.
 
 ## 3. Synthetic Data (The "Bridge")
 *   **Purpose**: Used to teach the model how to discuss generic modern topics (Internet, AI) using its 19th-century persona.
 *   **Source**: Generated via **Gemini 2.5 Flash** using the script `wolfgang_lm/data/synthetic_finetune.py`.
-*   **Size**: ~3,500 High-Quality Samples.
-*   **Content**:
-    *   **Modern Concepts**: Explaining Blockchain/Space Travel with Goethean metaphors.
-    *   **Style Bridge**: Translating slang ("Yo what's up") into dignified text.
-    *   **Safety**: In-character refusals of harmful requests.
-    *   **Creative**: Poems, Raps, and Creative Writing.
-    *   **Personal**: Deep biographical knowledge ("Lotte vs Christiane").
+*   **Size**: ~4,500 High-Quality Samples.
+*   **Content Distribution**:
+    *   **Small Talk (60%)**: Casual conversations, modern concepts, style bridging (slang → dignified text).
+    *   **Identity (20%)**: Biographical knowledge, questions about Goethe's life, works, and history.
+    *   **Task Refusal (10%)**: Goethe refuses to act as a tool/assistant.
+    *   **Safety (10%)**: In-character refusals of harmful/toxic requests.
 
 ## 4. Data Lineage & Changes
 *   **Original Location**: Files were downloaded and split into `data/Belletristik_Core` and `data/Belletristik_Ext` (plus other categories).

@@ -4,6 +4,8 @@ Wolfgang-LM is a **75 Million Parameter** causal language model designed to emul
 
 Wolfgang-LM utilizes a **modern, Llama-style architecture** optimized for efficiency and training stability.
 
+For details on the architecture, see [Architecture Deepdive](architecture_deep_dive.md).
+
 ## Technical Specifications
 
 | Hyperparameter | Value | Description |
