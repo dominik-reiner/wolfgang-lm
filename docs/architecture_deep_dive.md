@@ -75,6 +75,6 @@ Input to Block $i$ is $x_i \in \mathbb{R}^{1 \times 512 \times 640}$.
 *   **Rationale for Wolfgang-LM**:
     *   **Parameter Efficiency**: For a model this size (640 dim, 32k vocab), the embeddings are $\approx$ 21M parameters.
     *   **Impact**:
-        *   **Untied**: Total Parameters $\approx$ 88M (Embeddings are $\approx$ 48% of model).
-        *   **Tied**: Total Parameters $\approx$ 67M (Embeddings are $\approx$ 31% of model).
+        *   **Untied**: Total Parameters $\approx$ 97M (Embeddings are $\approx$ 43% of model).
+        *   **Tied**: Total Parameters $\approx$ 75M (Embeddings are $\approx$ 28% of model).
     *   **Intuition**: "Reading" (Input) and "Speaking" (Output) should use the same dictionary. Tying regularizes the model by enforcing that the vector representation of a token is the same whether it is being consumed or produced.

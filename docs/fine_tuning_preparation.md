@@ -37,6 +37,3 @@ To run the extraction pipeline:
 # Requires GEMINI_API_KEY environment variable
 pixi run python -m wolfgang_lm.data.extract_dialogue
 ```
-
-## See Also
-*   [Synthetic Data Generation](synthetic_data.md) — Uses extracted dialogues as style reference for generating modern conversational training data.

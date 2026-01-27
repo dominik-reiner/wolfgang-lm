@@ -27,7 +27,7 @@ WOLFGANG-LM is a specialized language model trained from scratch to preserve and
     *   **Features**: RoPE, SwiGLU, RMSNorm, GQA, Weight Tying (See [Architecture Docs](docs/model_architecture.md))
     *   **Context**: 512 Tokens
     *   **Inference**: Custom sampler with Nucleus & Top-K sampling (See [Inference Docs](docs/inference_generation.md))
-*   **Tokenizer**: Custom Byte-Pair Encoding (BPE)
+*   **Tokenizer**: Byte-Pair Encoding (BPE)
     *   **Vocabulary**: 32,768 tokens
     *   **Specialization**: Optimized for 17th to 19th-century German
 
@@ -71,18 +71,13 @@ Supports CUDA (NVIDIA), MPS (Apple Silicon), and CPU.
 *   **Command**: `pixi run python -m wolfgang_lm.training.train_finetune`
 
 ### 3. Usage (Chat)
-**Backend API (Port 8000)**:
+**Backend API (Port 8000) and Frontend Client**:
 ```bash
 pixi run server
 
 ```
 
-**Frontend Client**:
-Open `web/index.html` directly in your browser, or host it separately:
-```bash
-python run server
-```
-Then visit `http://localhost:8080`.
+Open `http://localhost:8080`.
 
 ## What makes WOLFGANG-LM unique?
 Historical Grounding: The model interprets modern concepts through the lens of 18th to 19th-century German. Instead of "failing" at modern words, it recontextualizes them (e.g., a Smartphone becomes "a magical black mirror for the capturing of distant spirits and voices").

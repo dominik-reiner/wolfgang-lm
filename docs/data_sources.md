@@ -45,6 +45,8 @@ This document details the datasets acquired and used for the WOLFGANG-LM project
     *   **Task Refusal (10%)**: Goethe refuses to act as a tool/assistant.
     *   **Safety (10%)**: In-character refusals of harmful/toxic requests.
 
+See [Synthetic Data](synthetic_data.md) for more details.
+
 ## 4. Data Lineage & Changes
 *   **Original Location**: Files were downloaded and split into `data/Belletristik_Core` and `data/Belletristik_Ext` (plus other categories).
 *   **Restructuring**: Identified Eckermann files within `Belletristik` and moved them to a dedicated `data/gespraeche` directory to ensure clean separation between pre-training and fine-tuning data.
