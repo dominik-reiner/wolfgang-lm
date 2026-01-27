@@ -4,8 +4,10 @@ import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+from pathlib import Path
 from wolfgang_lm.inference.generation import WolfgangGenerator
 
 app = FastAPI(title="Wolfgang-LM API")
@@ -31,10 +33,10 @@ class Message(BaseModel):
 class ChatCompletionRequest(BaseModel):
     messages: List[Message]
     max_tokens: int = 200
-    temperature: float = 0.05
-    top_p: float = 0.95
-    top_k: int = 40
-    repetition_penalty: float = 1.15
+    temperature: float = 0.5
+    top_p: float = 0.8
+    top_k: Optional[int] = 15
+    repetition_penalty: float = 1.1
     seed: int = None
     stream: bool = False
 
@@ -155,6 +157,8 @@ async def chat_completions(req: ChatCompletionRequest):
             top_p=req.top_p,
             include_prompt=False,
             stop_tokens=stop_tokens,
+            repetition_penalty=req.repetition_penalty,
+            seed=req.seed,
         )
 
         duration = time.perf_counter() - start_time
@@ -238,3 +242,10 @@ def stream_generator(prompt, req, stop_tokens):
     }
     yield f"data: {json.dumps(chunk_data)}\n\n"
     yield "data: [DONE]\n\n"
+
+
+# Serve static frontend files (must be mounted AFTER API routes)
+# This allows the frontend to be served from the same origin as the API
+web_dir = Path(__file__).parent.parent.parent / "web"
+if web_dir.exists():
+    app.mount("/", StaticFiles(directory=str(web_dir), html=True), name="static")

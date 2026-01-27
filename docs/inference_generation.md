@@ -25,10 +25,10 @@ The `generate` method supports a variety of parameters to control the creativity
 | :--- | :--- | :--- | :--- | :--- |
 | `prompt` | `str` | Required | - | The input text to continue. |
 | `max_new_tokens` | `int` | `100` | `200` | Maximum number of tokens to generate. |
-| `temperature` | `float` | `1.0` | `0.05` | Controls randomness. High (1.0+) is chaotic, Low (<0.5) is deterministic. |
-| `top_k` | `int` | `None` | `40` | Limits sampling to the top `k` most likely tokens. |
-| `top_p` | `float` | `1.0` | `0.95` | Nucleus Sampling. Cumulative probability threshold. |
-| `repetition_penalty` | `float` | `1.0` | `1.15` | Penalizes tokens that have already appeared in the recent context. |
+| `temperature` | `float` | `1.0` | `0.6` | Controls randomness. High (1.0+) is chaotic, Low (<0.5) is deterministic. |
+| `top_k` | `int` | `None` | `15` | Limits sampling to the top `k` most likely tokens. Critical for small models. |
+| `top_p` | `float` | `1.0` | `0.8` | Nucleus Sampling. Cumulative probability threshold. |
+| `repetition_penalty` | `float` | `1.0` | `1.1` | Penalizes tokens that have already appeared in the recent context. |
 | `stop_tokens` | `list[int]` | `None` | `[UserToken]` | List of token IDs that, if generated, stop the generation immediately. |
 | `seed` | `int` | `None` | Random seed for reproducibility. |
 | `stream` | `bool` | `False` | If True, returns a Python generator yielding text chunks as they are created. |
@@ -45,7 +45,7 @@ For each step up to `max_new_tokens`:
 3.  **Temperature Scaling**: Logits are divided by `temperature`.
 4.  **Repetition Penalty**:
     - Implements the [CTRL](https://arxiv.org/abs/1909.05858) penalty.
-    - If a token is in the recent context window (last 24 tokens), its logit is penalized (pushed towards negative infinity) to reduce likelihood.
+    - Penalizes tokens generated *after* the prompt start. Does not penalize using words from the User's question.
 5.  **Filtering**:
     - **Top-K**: Keeps only the K highest probability tokens.
     - **Top-P (Nucleus)**: Keeps the smallest set of tokens whose cumulative probability exceeds P.

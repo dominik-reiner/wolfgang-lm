@@ -64,6 +64,8 @@ class WolfgangGenerator:
             if seed is not None:
                 torch.manual_seed(seed)
 
+            start_gen_len = idx.shape[1]
+
             for _ in range(max_new_tokens):
                 # cut sequence to block size from the end
                 # TODO: implement sliding window for longer sequences
@@ -73,22 +75,28 @@ class WolfgangGenerator:
 
                 # repetition penalty
                 # Implements CTRL (Keskar et al., 2019) repetition penalty.
+                # Modified to only penalize newly generated tokens, not the prompt.
                 # If score < 0: multiply by penalty (make more negative).
                 # If score > 0: divide by penalty (shrink towards 0).
                 if repetition_penalty != 1.0:
                     for i in range(logits.shape[0]):
-                        context_window = 24
-                        cond_idx = (
-                            idx[i, -context_window:]
-                            if idx.size(1) > context_window
-                            else idx[i]
-                        )
-                        unique_tokens = torch.unique(cond_idx)
-                        logits[i, unique_tokens] = torch.where(
-                            logits[i, unique_tokens] < 0,
-                            logits[i, unique_tokens] * repetition_penalty,
-                            logits[i, unique_tokens] / repetition_penalty,
-                        )
+                        # Only look at tokens generated so far (exclude prompt)
+                        generated_tokens = idx[i, start_gen_len:]
+
+                        # Apply sliding window to generated tokens only
+                        context_window = 48
+                        if generated_tokens.size(0) > context_window:
+                            cond_idx = generated_tokens[-context_window:]
+                        else:
+                            cond_idx = generated_tokens
+
+                        if cond_idx.numel() > 0:
+                            unique_tokens = torch.unique(cond_idx)
+                            logits[i, unique_tokens] = torch.where(
+                                logits[i, unique_tokens] < 0,
+                                logits[i, unique_tokens] * repetition_penalty,
+                                logits[i, unique_tokens] / repetition_penalty,
+                            )
 
                 if top_k is not None:
                     v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
