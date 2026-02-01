@@ -163,16 +163,16 @@ class WolfgangGenerator:
         stop_tokens: Optional[list] = None,
         seed: Optional[int] = None,
     ):
-        print("Generating with the following parameters:")
-        print(f"Max new tokens: {max_new_tokens}")
-        print(f"Temperature: {temperature}")
-        print(f"Top k: {top_k}")
-        print(f"Top p: {top_p}")
-        print(f"Repetition penalty: {repetition_penalty}")
-        print(f"Include prompt: {include_prompt}")
-        print(f"Stream: {stream}")
-        print(f"Stop tokens: {stop_tokens}")
-        print(f"Seed: {seed}")
+        # print("Generating with the following parameters:")
+        # print(f"Max new tokens: {max_new_tokens}")
+        # print(f"Temperature: {temperature}")
+        # print(f"Top k: {top_k}")
+        # print(f"Top p: {top_p}")
+        # print(f"Repetition penalty: {repetition_penalty}")
+        # print(f"Include prompt: {include_prompt}")
+        # print(f"Stream: {stream}")
+        # print(f"Stop tokens: {stop_tokens}")
+        # print(f"Seed: {seed}")
         # Encode
         ids = self.tokenizer.encode(prompt).ids
         # shape (1, seq_len)

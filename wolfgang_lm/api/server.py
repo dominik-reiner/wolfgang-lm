@@ -134,18 +134,24 @@ async def chat_completions(req: ChatCompletionRequest):
     # Prompt for the new generation
     prompt += "<|assistant|>\n"
 
-    print(f"\n📝 PROMPT ({len(prompt)} chars):")
-    print("-" * 20)
-    print(prompt.strip())
-    print("-" * 20)
-    print("🤖 Generating...", end="", flush=True)
+    # print(f"\n📝 PROMPT ({len(prompt)} chars):")
+    # print("-" * 20)
+    # print(prompt.strip())
+    # print("-" * 20)
+    # print("🤖 Generating...", end="", flush=True)
+
+    # Calculate prompt tokens
+    prompt_ids = generator.tokenizer.encode(prompt).ids
+    prompt_tokens = len(prompt_ids)
+    # print(f"📊 Token Usage: {prompt_tokens} input tokens")
 
     start_time = time.perf_counter()
 
     # 2. Generator Logic
     if req.stream:
         return StreamingResponse(
-            stream_generator(prompt, req, stop_tokens), media_type="text/event-stream"
+            stream_generator(prompt, req, stop_tokens, prompt_tokens),
+            media_type="text/event-stream",
         )
     else:
         # Non-streaming generation
@@ -161,13 +167,18 @@ async def chat_completions(req: ChatCompletionRequest):
             seed=req.seed,
         )
 
+        # Calculate completion tokens
+        completion_ids = generator.tokenizer.encode(output_text).ids
+        completion_tokens = len(completion_ids)
+        total_tokens = prompt_tokens + completion_tokens
+
         duration = time.perf_counter() - start_time
-        print(f" Done! ({duration:.2f}s)")
-        print(f"\n📤 OUTPUT ({len(output_text)} chars):")
-        print("-" * 20)
-        print(output_text.strip())
-        print("-" * 20)
-        print("=" * 60 + "\n")
+        # print(f" Done! ({duration:.2f}s)")
+        # print(f"\n📤 OUTPUT ({len(output_text)} chars):")
+        # print("-" * 20)
+        # print(output_text.strip())
+        # print("-" * 20)
+        # print("=" * 60 + "\n")
 
         return {
             "id": "chatcmpl-wolfgang",
@@ -181,10 +192,15 @@ async def chat_completions(req: ChatCompletionRequest):
                     "finish_reason": "length",
                 }
             ],
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+            },
         }
 
 
-def stream_generator(prompt, req, stop_tokens):
+def stream_generator(prompt, req, stop_tokens, prompt_tokens):
 
     # Send initial chunk with role
     chunk_data = {
@@ -226,11 +242,16 @@ def stream_generator(prompt, req, stop_tokens):
         yield f"data: {json.dumps(chunk_data)}\n\n"
 
     # Log the full output
-    print(f"\n📤 OUTPUT ({len(full_response)} chars):")
-    print("-" * 20)
-    print(full_response.strip())
-    print("-" * 20)
-    print("=" * 60 + "\n")
+    # print(f"\n📤 OUTPUT ({len(full_response)} chars):")
+    # print("-" * 20)
+    # print(full_response.strip())
+    # print("-" * 20)
+    # print("=" * 60 + "\n")
+
+    # Calculate completion tokens
+    completion_ids = generator.tokenizer.encode(full_response).ids
+    completion_tokens = len(completion_ids)
+    total_tokens = prompt_tokens + completion_tokens
 
     # Final 'done' chunk to signify stop
     chunk_data = {
@@ -239,6 +260,11 @@ def stream_generator(prompt, req, stop_tokens):
         "created": int(time.time()),
         "model": "wolfgang-lm-v1",
         "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        },
     }
     yield f"data: {json.dumps(chunk_data)}\n\n"
     yield "data: [DONE]\n\n"
