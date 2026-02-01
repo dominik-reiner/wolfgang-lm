@@ -50,3 +50,8 @@ See [Synthetic Data](synthetic_data.md) for more details.
 ## 4. Data Lineage & Changes
 *   **Original Location**: Files were downloaded and split into `data/Belletristik_Core` and `data/Belletristik_Ext` (plus other categories).
 *   **Restructuring**: Identified Eckermann files within `Belletristik` and moved them to a dedicated `data/gespraeche` directory to ensure clean separation between pre-training and fine-tuning data.
+
+## 5. Licensing
+
+*   **DTA Corpus (Foundation & Persona)**: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+    *   **Attribution**: Berlin-Brandenburgische Akademie der Wissenschaften. Deutsches Textarchiv
