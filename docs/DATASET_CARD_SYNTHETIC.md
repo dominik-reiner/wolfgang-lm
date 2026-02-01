@@ -29,7 +29,12 @@ This dataset contains **~4,500 synthetic conversations** designed to fine-tune l
 
 ## Dataset Structure
 
-Each entry contains a conversation history and rich metadata about the scenario that generated it.
+The dataset consists of two files:
+
+1.  **`dataset_synthetic_conversational.jsonl`**: The main synthetic instruction-tuning dataset (~4,500 samples).
+2.  **`gespraeche.jsonl`**: The processed extraction of Eckermann's conversations (Public Domain/CC BY source), used as style references.
+
+Each entry in the synthetic dataset contains a conversation history and rich metadata about the scenario that generated it.
 
 ### Example
 
