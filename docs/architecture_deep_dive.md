@@ -31,6 +31,47 @@ Input to Block $i$ is $x_i \in \mathbb{R}^{1 \times 512 \times 640}$.
 | **Output** | `[512, 640]` | $x \cdot W_O^T$ | `[512, 640]` | **Math**: $[512, 640] \cdot [640, 640] \rightarrow [512, 640]$.<br>**Weights**: $W_O \in \mathbb{R}^{640 \times 640}$.<br>**Low-Rank Interpretation**: Mixes the 10 heads back into the model manifold. |
 | **Skip Connection** | `[512, 640]` | `Add` | `[512, 640]` | **Element-wise Addition**: $y = x + F(x)$. The block learns the **Residual** (the difference needed to improve $x$). If $F(x) \approx 0$, the layer does nothing (Identity). |
 
+### Conceptual Note: "Low-Rank" View of Value + Output Projection (Interpretation)
+
+> **Important:** Wolfgang-LM currently uses standard dense linear layers for $W_V$ and $W_O$ (no explicit low-rank factorization / LoRA modules). The "low-rank" language below is a **conceptual lens** that can help build intuition for why attention is structured as "project $\rightarrow$ mix $\rightarrow$ project".
+
+#### The idea
+Attention can be understood as moving information through a smaller **value feature space** (per head) and then mapping it back into the full model space.
+
+For a single head ($h$), define:
+*   Model dimension: $d = d_{model}$
+*   Per-head value dimension: $d_v$ (in Wolfgang-LM, $d_v = d_{head} = 64$)
+
+**(1) Value-down projection (the "V matrix" per head)**
+We project token states ($x_t \in \mathbb{R}^{d}$) into a smaller per-head value space:
+$$v_t^{(h)} = x_t W_{V,h}^T \in \mathbb{R}^{d_v}, \quad W_{V,h} \in \mathbb{R}^{d_v \times d}$$
+
+**(2) Weighted sums happen in the smaller value space**
+Given attention weights ($a_{ts}^{(h)}$), the head output in value space is:
+$$o_t^{(h)} = \sum_{s \le t} a_{ts}^{(h)} v_s^{(h)} \in \mathbb{R}^{d_v}$$
+This is the key computational pattern: the expensive token-mixing (weighted sums) is done over vectors of dimension $d_v$, not $d$.
+
+**(3) Value-up projection (often "hidden" inside the output matrix)**
+Each head's value-space output is mapped back into model space:
+$$\Delta x_t^{(h)} = o_t^{(h)} W_{U,h}^T \in \mathbb{R}^{d}, \quad W_{U,h} \in \mathbb{R}^{d \times d_v}$$
+
+#### Why this is called "low-rank" (conceptually)
+The composition "down then up" forms a rank-bounded mapping: $W_{U,h}^T W_{V,h}^T$ has rank at most $d_v$. So each head's read/write pathway can be viewed as a **rank-($\le d_v$) route** from model space back to model space (with attention providing the data-dependent mixing across tokens).
+
+> [!NOTE]
+> In many architectures, $d_v = d_{head}$ (as in Wolfgang-LM), so this is mainly an **interpretation**. Some designs choose $d_v \ll d_{head}$ to *explicitly* reduce compute by doing the weighted sums in a stricter bottleneck space.
+
+#### Why the "up projections" are bundled into a single $W_O$
+After attention mixing, we concatenate all head outputs:
+$$o_t = \mathrm{concat}(o_t^{(1)}, \dots, o_t^{(H)}) \in \mathbb{R}^{H d_v}$$
+Instead of applying each $W_{U,h}$ and summing, implementations usually do one matrix multiply:
+$$\mathrm{out}_t = o_t W_O^T$$
+This is equivalent because $W_O^T$ can be seen as the vertical stacking of the per-head "up" matrices:
+$$W_O^T = \begin{bmatrix} W_{U,1}^T \\ W_{U,2}^T \\ \vdots \\ W_{U,H}^T \end{bmatrix}$$
+Therefore:
+$$o_t W_O^T = \sum_{h=1}^{H} o_t^{(h)} W_{U,h}^T$$
+which matches "apply each head's up-projection and add" exactly.
+
 #### Sub-Layer B: MLP (SwiGLU)
 | Step | Shape In | Operation | Shape Out | Rationale & Background |
 | :--- | :--- | :--- | :--- | :--- |
@@ -57,8 +98,8 @@ Input to Block $i$ is $x_i \in \mathbb{R}^{1 \times 512 \times 640}$.
 
 ### Why 1728 MLP Hidden Size?
 *   **The Problem**: SwiGLU uses 3 matrices ($W_{gate}, W_{val}, W_{down}$) vs standard FFN's 2 matrices ($W_{up}, W_{down}$).
-*   **The Constraint**: Maintain same parameter count ($Params \approx 2 \times 4d^2$).
-*   **The Solution**: $3 \times d_{swiglu}^2 \approx 2 \times (4d)^2 \rightarrow d_{swiglu} \approx \frac{2}{3} \cdot 4d = \frac{8}{3}d$.
+*   **The Constraint**: Maintain same parameter count ($Params \approx 2 \times d \times 4d$).
+*   **The Solution**: $3 \times d \times d_{swiglu} \approx 2 \times d \times 4d \rightarrow 3 d_{swiglu} \approx 8d \rightarrow d_{swiglu} \approx \frac{8}{3}d$.
 *   **Calculation**: $640 \times \frac{8}{3} = 1706.66 \rightarrow$ Rounded to nearest 32 $\rightarrow$ **1728**.
 
 ### Why GQA (10 Heads / 5 KV Heads)?
