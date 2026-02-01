@@ -25,7 +25,7 @@ Moving to a **smaller vocabulary** and **more layers** to align with state-of-th
 - **New Tokenizer**: DO NOT just trim the old one. Train a **new BPE tokenizer** specifically on the 265M token dataset to find the most efficient 8,000 tokens for *this* specific text.
 - **Config Changes**:
   ```python
-  config = LlamaConfig(
+  config = Config(
       vocab_size=8192,
       hidden_size=384,      # Narrow
       intermediate_size=1024, # SwiGLU
