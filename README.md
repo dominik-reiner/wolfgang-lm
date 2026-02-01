@@ -3,6 +3,12 @@ A Historical Tiny Language Model for Goethe-Persona Preservation
 
 ![WOLFGANG-LM Logo](logo.png)
 
+[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/dominik-reiner/wolfgang-lm-v1-demo)
+[![Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-blue)](https://huggingface.co/dominik-reiner/wolfgang-lm-75M-instruct-v1)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![Parameters](https://img.shields.io/badge/Parameters-75M-purple)](https://huggingface.co/dominik-reiner/wolfgang-lm-75M-instruct-v1)
+
 ## Table of Contents
 - [Project Vision](#project-vision)
 - [Examples](#examples)
@@ -71,6 +77,13 @@ Supports CUDA (NVIDIA), MPS (Apple Silicon), and CPU.
 *   **Command**: `pixi run python -m wolfgang_lm.training.train_finetune`
 
 ### 3. Usage (Chat)
+
+**Online Demo**: [Hugging Face Space](https://huggingface.co/spaces/dominik-reiner/wolfgang-lm-v1-demo)
+
+**Model Weights**:
+*   **Instruct (75M)**: [dominik-reiner/wolfgang-lm-75M-instruct-v1](https://huggingface.co/dominik-reiner/wolfgang-lm-75M-instruct-v1)
+*   **Base (75M)**: [dominik-reiner/wolfgang-lm-75M-base-v1](https://huggingface.co/dominik-reiner/wolfgang-lm-75M-base-v1) (Coming Soon)
+
 **Backend API (Port 8000) and Frontend Client**:
 ```bash
 pixi run server
@@ -92,3 +105,16 @@ Linguistic Preservation: WOLFGANG-LM revives obsolete German grammatical structu
 
 ### Software Licenses
 Wolfgang-LM is Open Source (MIT License). Use of third-party dependencies is subject to their respective licenses. For a full list of dependencies, refer to `pyproject.toml`.
+
+## Citation
+
+If you use Wolfgang-LM in your research, please cite it as:
+
+```bibtex
+@misc{reiner2026wolfganglm,
+  author = {Reiner, Dominik},
+  title = {Wolfgang-LM: A Historical Tiny Language Model for Goethe-Persona Preservation},
+  year = {2026},
+  howpublished = {\url{https://github.com/dominik-reiner/wolfgang-lm}},
+}
+```
