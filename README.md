@@ -45,7 +45,7 @@ WOLFGANG-LM is a specialized language model trained from scratch to preserve and
     *   *Content*: Belletristik (Core & Extension), Gebrauchsliteratur, Wissenschaft, and Newspapers.
 *   **Conversational Data**:
     *   *Historical*: Johann Peter Eckermann's *Conversations with Goethe* (from DTA Belletrisk Core). Used for style reference.
-    *   *Synthetic*: ~4,500 scenario-based conversational pairs generated using **Google Gemini 2.5 Flash** to bridge the gap to modern user queries.
+    *   *Synthetic*: ~4,500 scenario-based conversational pairs generated using **Google Gemini 2.5 Flash** to bridge the gap to modern user queries ([Hugging Face Dataset](https://huggingface.co/datasets/dominik-reiner/wolfgang-lm-synthetic-chat-v1)).
 
 For details refer to [Data Sources](docs/data_sources.md).
 
@@ -83,6 +83,9 @@ Supports CUDA (NVIDIA), MPS (Apple Silicon), and CPU.
 **Model Weights**:
 *   **Instruct (75M)**: [dominik-reiner/wolfgang-lm-75M-instruct-v1](https://huggingface.co/dominik-reiner/wolfgang-lm-75M-instruct-v1)
 *   **Base (75M)**: [dominik-reiner/wolfgang-lm-75M-base-v1](https://huggingface.co/dominik-reiner/wolfgang-lm-75M-base-v1)
+
+**Datasets**:
+*   **Synthetic Chat (v1)**: [dominik-reiner/wolfgang-lm-synthetic-chat-v1](https://huggingface.co/datasets/dominik-reiner/wolfgang-lm-synthetic-chat-v1)
 
 **Backend API (Port 8000) and Frontend Client**:
 ```bash
