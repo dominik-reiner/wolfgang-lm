@@ -82,7 +82,7 @@ Supports CUDA (NVIDIA), MPS (Apple Silicon), and CPU.
 
 **Model Weights**:
 *   **Instruct (75M)**: [dominik-reiner/wolfgang-lm-75M-instruct-v1](https://huggingface.co/dominik-reiner/wolfgang-lm-75M-instruct-v1)
-*   **Base (75M)**: [dominik-reiner/wolfgang-lm-75M-base-v1](https://huggingface.co/dominik-reiner/wolfgang-lm-75M-base-v1) (Coming Soon)
+*   **Base (75M)**: [dominik-reiner/wolfgang-lm-75M-base-v1](https://huggingface.co/dominik-reiner/wolfgang-lm-75M-base-v1)
 
 **Backend API (Port 8000) and Frontend Client**:
 ```bash
