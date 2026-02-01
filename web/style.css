@@ -21,7 +21,7 @@ body {
     background: var(--bg-color);
     background-image: var(--bg-gradient);
     color: var(--text-primary);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     margin: 0;
     height: 100vh;
     overflow: hidden;
@@ -43,8 +43,8 @@ body {
 
 /* Glass Header */
 header {
-    text-align: center;
-    padding: 40px 20px 30px;
+    text-align: left;
+    padding: 15px 20px;
     background: var(--surface-glass);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -54,29 +54,137 @@ header {
     left: 0;
     right: 0;
     z-index: 100;
+    display: flex;
+    justify-content: center;
 }
 
-#app-logo {
-    height: 175px;
-    width: 175px;
-    /* Forced Square aspect if needed, or auto */
-    object-fit: contain;
-    margin-bottom: 15px;
-    border-radius: 24px;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 800px;
+    /* Match chat width approx */
+}
+
+/* Logo Wrapper */
+.logo-wrapper {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+    /* Remove bottom gap */
     transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-#app-logo:hover {
+.logo-wrapper:hover {
     transform: scale(1.08) rotate(2deg);
 }
 
+#app-logo {
+    height: 150px;
+    width: 150px;
+    object-fit: contain;
+    margin-bottom: 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    /* Transition removed here as it is on the wrapper */
+}
+
+/* Eye Positioning */
+.eye {
+    position: absolute;
+    width: 8px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.7);
+    /* Slight sclera */
+    border-radius: 50%;
+    overflow: hidden;
+    z-index: 10;
+    /* On top of image */
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    /* Hidden by default for Easter Egg */
+    transition: opacity 0.3s ease;
+}
+
+.pupil {
+    width: 3px;
+    height: 3px;
+    background: #000;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.logo-wrapper.easter-egg-active .eye {
+    opacity: 1;
+}
+
+/* Specific positions - Adjusted for Goethe's face */
+.eye-left {
+    top: 29%;
+    left: 51%;
+    transform: rotate(-5deg);
+}
+
+.eye-right {
+    top: 29%;
+    left: 61%;
+    transform: rotate(5deg);
+}
+
+/* Tongue Styling */
+.tongue {
+    position: absolute;
+    width: 8px;
+    height: 10px;
+    background: #ff6b6b;
+    border-radius: 0 0 5px 5px;
+    top: 41%;
+    left: 60%;
+    /* Approx mouth position */
+    transform: translate(-50%, -10px) scaleY(0);
+    /* Hidden/Retracted */
+    transform-origin: top center;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 5;
+    box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+}
+
+/* Tongue Line */
+.tongue::after {
+    content: '';
+    position: absolute;
+    width: 2px;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.1);
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 2px;
+}
+
+/* Show tongue on hover ONLY when active */
+.logo-wrapper.easter-egg-active:hover .tongue {
+    transform: translate(-50%, 0) scaleY(1);
+    opacity: 1;
+    transition-delay: 0.5s;
+}
+
+.header-text {
+    display: flex;
+    flex-direction: column;
+}
+
 header h1 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 32px;
-    /* Larger */
-    letter-spacing: -0.03em;
-    margin: 0 0 8px 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 20px;
+    /* Compact */
+    letter-spacing: -0.02em;
+    margin: 0;
     background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
     background-clip: text;
     -webkit-background-clip: text;
@@ -97,8 +205,8 @@ header p {
 #chat-container {
     flex: 1;
     overflow-y: auto;
-    padding: 375px 30px 120px;
-    /* INCREASED: 300px -> 420px for 150px logo */
+    padding: 200px 30px 180px;
+    /* Reduced top padding */
     display: flex;
     flex-direction: column;
     gap: 30px;
@@ -130,6 +238,18 @@ header p {
     from {
         opacity: 0;
         transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
     }
 
     to {
@@ -216,7 +336,7 @@ input {
     flex: 1;
     padding: 12px 20px;
     font-size: 17px;
-    font-family: 'Inter', sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: white;
     background: transparent;
     /* Transparent inside wrapper */
@@ -241,7 +361,7 @@ button {
     color: black;
     border: none;
     border-radius: 100px;
-    font-family: 'Outfit', sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-weight: 700;
     font-size: 15px;
     cursor: pointer;
@@ -295,11 +415,10 @@ button:hover {
     }
 }
 
-/* Status Indicator */
+/* Header Status Positioning */
 .status-container {
     position: absolute;
     top: 20px;
-    right: 20px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -315,14 +434,14 @@ button:hover {
     backdrop-filter: blur(5px);
 }
 
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: var(--text-secondary);
-    transition: all 0.3s ease;
+/* Explicit positioning for the status indicator (right side) */
+#status-container {
+    right: 20px;
+    top: 15px;
+    /* Adjust vertical align */
 }
 
+/* Re-add online styles */
 .status-container.online {
     border-color: rgba(34, 197, 94, 0.3);
     background: rgba(34, 197, 94, 0.1);
@@ -349,4 +468,117 @@ button:hover {
 
 .status-container.offline .status-text {
     color: #f87171;
+}
+
+
+
+/* Input Row Layout */
+.input-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 800px;
+    justify-content: center;
+}
+
+/* Icon Button (Reset) */
+.icon-btn {
+    background: rgba(255, 255, 255, 0.08);
+    /* Slightly lighter */
+    border: 1px solid var(--border-glass);
+    color: var(--text-secondary);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
+    margin: 0;
+    padding: 0;
+    pointer-events: auto;
+    /* Enable clicks! */
+}
+
+.icon-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    /* Red tint for reset/trash */
+    color: #fca5a5;
+    transform: scale(1.05);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.icon-btn svg {
+    stroke-width: 2px;
+}
+
+/* Warning Banner */
+.warning-banner {
+    display: none;
+    /* Hidden by default */
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    animation: fadeIn 0.3s ease;
+    width: 100%;
+    max-width: 800px;
+}
+
+.warning-banner.visible {
+    display: block;
+}
+
+/* Disabled State */
+.input-wrapper.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(1);
+}
+
+input:disabled {
+    cursor: not-allowed;
+}
+
+
+
+/* Legal Footer */
+.legal-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.6;
+    margin-top: 4px;
+    pointer-events: auto;
+}
+
+.legal-footer a {
+    color: inherit;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.legal-footer a:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.separator {
+    opacity: 0.4;
+}
+
+.hosting-note {
+    font-style: italic;
+    opacity: 0.8;
 }
