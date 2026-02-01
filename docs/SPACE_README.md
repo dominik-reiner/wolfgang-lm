@@ -1,11 +1,12 @@
 ---
-title: Wolfgang-LM
-emoji: 📜
-colorFrom: amber
-colorTo: brown
+title: Wolfgang-LM V1 Demo
+emoji: 📚
+colorFrom: gray
+colorTo: blue
 sdk: docker
-pinned: false
+pinned: true
 license: mit
+short_description: Chat with a digital recreation of Johann Wolfgang von Goethe
 ---
 
 # Wolfgang-LM
