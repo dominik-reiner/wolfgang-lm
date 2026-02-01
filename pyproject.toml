@@ -8,12 +8,11 @@ version = "0.1.0"
 description = "A historical language model based on Goethe."
 requires-python = ">=3.12"
 dependencies = [
-    "google-genai",
     "numpy",
     "tokenizers",
-    "python-dotenv",
     "setuptools", "pandas>=2.3.3,<3", "matplotlib>=3.10.8,<4",
     "transformers",
+    "huggingface_hub",
 ]
 
 [tool.setuptools.packages.find]
@@ -22,7 +21,7 @@ include = ["wolfgang_lm*"]
 # Pixi Environment Configuration
 [tool.pixi.workspace]
 channels = ["pytorch", "nvidia", "conda-forge"]
-platforms = ["osx-arm64", "linux-64"]
+platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
 
 [tool.pixi.dependencies]
 python = "=3.12"
@@ -43,9 +42,14 @@ cuda-version = "12.1"
 [tool.pixi.feature.cloud.target.linux-64.pypi-dependencies]
 triton = "==3.0.0"
 
+[tool.pixi.feature.dev.dependencies]
+google-genai = "*"
+python-dotenv = "*"
+
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }
 cloud = { features = ["cloud"], solve-group = "cloud" }
+dev = { features = ["dev"], solve-group = "default" }
 
 [tool.pixi.tasks]
 server = "uvicorn wolfgang_lm.api.server:app --reload"
